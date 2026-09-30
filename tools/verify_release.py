@@ -45,9 +45,13 @@ def main():
         return
 
     signature = run(arguments.build_tools / "apksigner", "verify", "--verbose", "--print-certs", arguments.apk)
-    certificates = re.findall(r"^Signer #\d+ certificate SHA-256 digest: ([0-9a-f]+)$", signature, re.M)
+    print(signature)
+    # Newer apksigner versions include the signer's SDK range before its certificate fields.
+    certificates = [value.lower() for value in re.findall(
+        r"^Signer .+ certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$", signature, re.M)]
     expected_certificate = (MODULE_ROOT / "docs/signing-certificate.sha256").read_text().strip()
-    require(certificates == [expected_certificate], "APK signer differs from the fixed module certificate")
+    require(certificates == [expected_certificate],
+            f"APK signer differs from the fixed module certificate: actual={certificates}, expected={expected_certificate}")
     outputs = MODULE_ROOT / "outputs"
     outputs.mkdir(exist_ok=True)
     name = f"HyperOS-Notification-Count-{expected_version}-release.apk"
