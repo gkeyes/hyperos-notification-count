@@ -46,12 +46,16 @@ def main():
 
     signature = run(arguments.build_tools / "apksigner", "verify", "--verbose", "--print-certs", arguments.apk)
     print(signature)
-    # Newer apksigner versions include the signer's SDK range before its certificate fields.
-    certificates = [value.lower() for value in re.findall(
-        r"^Signer .+ certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$", signature, re.M)]
+    # apksigner 37 labels verified scheme certificates as "V2 Signer:", etc.
+    # Several schemes may report the same signing identity; also require one APK signer.
+    certificates = {value.lower() for value in re.findall(
+        r"^(?:V[0-9.]+ )?Signer[^\n]*certificate SHA-256 digest: ([0-9a-fA-F]{64})[ \t]*$",
+        signature, re.M)}
     expected_certificate = (MODULE_ROOT / "docs/signing-certificate.sha256").read_text().strip()
-    require(certificates == [expected_certificate],
-            f"APK signer differs from the fixed module certificate: actual={certificates}, expected={expected_certificate}")
+    require(re.search(r"^Number of signers: 1$", signature, re.M) is not None,
+            "APK must have exactly one signer")
+    require(certificates == {expected_certificate},
+            f"APK signer differs from the fixed module certificate: actual={sorted(certificates)}, expected={expected_certificate}")
     outputs = MODULE_ROOT / "outputs"
     outputs.mkdir(exist_ok=True)
     name = f"HyperOS-Notification-Count-{expected_version}-release.apk"
