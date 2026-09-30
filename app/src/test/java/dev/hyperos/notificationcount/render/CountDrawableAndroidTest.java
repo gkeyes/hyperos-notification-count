@@ -4,6 +4,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.widget.FrameLayout;
 
@@ -92,13 +93,22 @@ public class CountDrawableAndroidTest {
     @Test public void densityChangeResizesTheGlyphInsideExistingBounds() {
         CountDrawable drawable = create();
         drawable.setIconSize(16);
-        int before = visiblePixels(draw(drawable, 8, Color.WHITE));
+        int[] before = draw(drawable, 8, Color.WHITE);
         drawable.setIconSize(24);
-        int after = visiblePixels(draw(drawable, 8, Color.WHITE));
+        int[] after = draw(drawable, 8, Color.WHITE);
         assertEquals(24, drawable.getIntrinsicWidth());
-        assertTrue(after > before);
+        assertTrue(visiblePixels(after) > visiblePixels(before));
         drawable.setIconSize(16);
-        assertEquals(before, visiblePixels(draw(drawable, 8, Color.WHITE)));
+        int[] restored = draw(drawable, 8, Color.WHITE);
+        assertEquals(16, drawable.getIntrinsicWidth());
+        assertEquals(16, drawable.getIntrinsicHeight());
+        Rect restoredBounds = visibleBounds(restored);
+        assertFalse(restoredBounds.isEmpty());
+        assertTrue(new Rect(8, 8, 24, 24).contains(restoredBounds));
+        assertTrue(restoredBounds.width() < visibleBounds(after).width());
+        assertTrue(restoredBounds.height() < visibleBounds(after).height());
+        // Native VectorDrawable caches only grow: shrinking resamples the larger bitmap,
+        // so antialiased alpha>0 pixel totals need not match its first 16px rasterization.
     }
 
     private CountDrawable create() {
@@ -124,5 +134,15 @@ public class CountDrawableAndroidTest {
         int visible = 0;
         for (int pixel : pixels) if (Color.alpha(pixel) > 0) visible++;
         return visible;
+    }
+
+    private Rect visibleBounds(int[] pixels) {
+        Rect bounds = new Rect();
+        for (int y = 0; y < 32; y++) {
+            for (int x = 0; x < 32; x++) {
+                if (Color.alpha(pixels[y * 32 + x]) > 0) bounds.union(x, y, x + 1, y + 1);
+            }
+        }
+        return bounds;
     }
 }
