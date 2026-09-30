@@ -12,6 +12,8 @@ android {
         versionName = "0.1.1"
     }
     buildFeatures { buildConfig = true }
+    // AGP 9 generates unit tests only for the selected tested build type.
+    testBuildType = "release"
     val cloudKeystore = providers.environmentVariable("MODULE_KEYSTORE_PATH").orNull
     if (cloudKeystore != null) {
         signingConfigs {
