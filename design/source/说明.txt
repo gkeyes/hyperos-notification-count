@@ -1,0 +1,9 @@
+通知数量图标设计稿
+
+推荐样式：空心圈；1–9 为圈内数字；大于 9 为圈内三颗居中的圆点；0 不显示。
+全部图标使用 16×16 画布，外圈直径 13.8，圈线厚度 1.05。
+数字参考 Helvetica Neue Medium，并已转成固定路径；图标不依赖字体文件。
+图标为单色 SVG，填充使用 currentColor，无背景，可跟随状态栏切换黑白。
+icons/ 内含 10 个独立 SVG；notification-counts.svg 为矢量总览。
+notification-count-preview.png 为效果预览。
+本稿为设计资产，尚未接入模块或在手机状态栏验证。

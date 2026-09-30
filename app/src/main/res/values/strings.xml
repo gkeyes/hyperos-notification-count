@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">HyperOS 通知数量</string>
+    <string name="module_description">将 HyperOS 4 顶部通知图标替换为通知总条数：1–9，超过 9 显示 ···。仅作用于系统界面。</string>
+</resources>

@@ -1,0 +1,68 @@
+name: Check and build module
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+      - name: Install Android 17 build dependencies
+        run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0'
+      - name: Check release unit tests
+        run: ./gradlew :app:testReleaseUnitTest --console=plain
+      - name: Prepare module signing
+        if: github.event_name != 'pull_request'
+        env:
+          MODULE_KEYSTORE_BASE64: ${{ secrets.MODULE_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          test -n "$MODULE_KEYSTORE_BASE64"
+          umask 077
+          printf '%s' "$MODULE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/notification-count.jks"
+          echo "MODULE_KEYSTORE_PATH=$RUNNER_TEMP/notification-count.jks" >> "$GITHUB_ENV"
+      - name: Build release
+        env:
+          MODULE_KEYSTORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.MODULE_KEYSTORE_PASSWORD || '' }}
+        run: ./gradlew :app:assembleRelease --console=plain
+      - name: Verify module metadata and scope
+        shell: bash
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            apk=app/build/outputs/apk/release/app-release-unsigned.apk
+          fi
+          python3 tools/verify_module.py --apk "$apk"
+          python3 tools/verify_release.py --apk "$apk" --build-tools "$ANDROID_HOME/build-tools/37.0.0" ${MODULE_KEYSTORE_PATH:+--signed}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: notification-count-apk-${{ github.run_number }}
+          path: outputs/
+          if-no-files-found: error
+      - name: Save test diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tests-${{ github.run_number }}
+          path: |
+            app/build/reports/tests/testReleaseUnitTest/
+            app/build/test-results/testReleaseUnitTest/
+          if-no-files-found: ignore
