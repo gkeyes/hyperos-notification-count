@@ -77,9 +77,10 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disk-size: 4096M
+          ram-size: 3072M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./gradlew :app:connectedReleaseAndroidTest --console=plain
+          script: bash tools/run_release_smoke.sh
       - name: Verify release runtime results and identical delivery APK
         if: github.event_name != 'pull_request'
         run: python3 tools/verify_smoke_results.py
