@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- minSdk 37 uses native receiver flags; no legacy signature-permission shim is needed. -->
+    <permission android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        tools:node="remove" />
+    <uses-permission android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        tools:node="remove" />
     <application
         android:name=".settings.ModuleApplication"
         android:allowBackup="false"
@@ -8,6 +14,9 @@
         android:hasCode="true"
         android:supportsRtl="true"
         android:theme="@style/SettingsTheme">
+        <!-- Settings do not use process-wide startup, emoji or profile-install initializers. -->
+        <provider android:name="androidx.startup.InitializationProvider" tools:node="remove" />
+        <receiver android:name="androidx.profileinstaller.ProfileInstallReceiver" tools:node="remove" />
         <activity
             android:name=".settings.SettingsActivity"
             android:exported="true"

@@ -1,4 +1,4 @@
-# HyperOS 通知数量 0.1.2
+# HyperOS 通知数量 0.1.3
 
 基于 libxposed API **102.0.0**，将 HyperOS 4 顶部通知 App 图标替换为一个通知数量图标。设置页从 LSPosed / Vector 的模块设置入口打开，**不显示桌面图标**。启用模块或安装新版后，在 SystemUI 下次加载模块时生效；新版加载后的过滤开关通过框架实时更新。
 
@@ -15,6 +15,8 @@
 按当前空间及原生当前 profiles 的通知记录统计，默认包含折叠、静默和常驻通知。已取消、本地划掉及被父汇总划掉的通知排除；同 key 更新不额外加一。有效子通知所在组的汇总不重复计数，孤立汇总保留为一条。类型过滤前先确认组内孩子，过滤孩子不会使汇总重新计数。这里表示系统通知条目总数，各 App 的真实未读消息数量不在此口径内。
 
 ## 过滤设置
+
+设置页使用 [Miuix 0.9.4](https://github.com/compose-miuix-ui/miuix/releases/tag/v0.9.4) 的 `TopAppBar`、`Card`、`SmallTitle`、`SwitchPreference` 和按钮组件，跟随系统深浅色与字体大小。原有 15 项过滤及 API 102 配置格式保持兼容，可从固定签名的 0.1.1 / 0.1.2 直接更新。
 
 15 个开关全部默认关闭，**开启表示从计数中排除**。只修改数量，不取消通知、不影响通知面板，也不改超级岛的展示。条目可能同时属于多类，命中任一开启的开关即排除。建议每次只开一项测试，然后再组合。
 
@@ -36,11 +38,11 @@
 
 ## 构建与签名
 
-GitHub Actions 使用 JDK 21、Android SDK 37.0、Gradle 9.4.1、Android Gradle Plugin 9.2.1，执行 release 单元测试和唯一的 release 构建。本地不运行编译或 Java 测试。
+GitHub Actions 使用 JDK 21、Android SDK 37.0、Gradle 9.4.1、Android Gradle Plugin 9.2.1，以及 built-in Kotlin / Compose compiler 2.4.20，执行 release 单元测试和唯一的 release 构建。AndroidX Compose 通过 BOM 2026.09.00 对齐。本地不运行编译或 Java / Kotlin 测试。
 
-模块 Hook API 依赖为 `compileOnly`，不把框架 API 类打进 APK。设置通信库及其官方 `XposedProvider` 随 APK 打包；编译后的 manifest 检查只允许这个 provider 和模块设置 Activity，并验证没有 LAUNCHER 或额外权限。JUnit / Robolectric 只用于测试，不属于模块 APK。
+模块 Hook API 依赖为 `compileOnly`，不把框架 API 类打进 APK。设置通信库及其官方 `XposedProvider` 随 APK 打包；编译后的 manifest 检查只允许这个 provider 和模块设置 Activity，并验证没有 LAUNCHER 或额外权限。定向移除设置页不使用的 AndroidX 启动 provider、profile receiver 和旧版动态接收器权限；仅允许两条 `required=false` 的 AndroidX Window 扩展库声明。JUnit / Robolectric / Compose UI test 只用于测试，不属于模块 APK。
 
-包名 `dev.hyperos.notificationcount`。首个本地测试包为 `0.1.0` / versionCode `1`；固定云端签名始于 `0.1.1` / versionCode `2`；当前设置页版本为 `0.1.2` / versionCode `3`。保留既有交付文件及校验值。
+包名 `dev.hyperos.notificationcount`。首个本地测试包为 `0.1.0` / versionCode `1`；固定云端签名始于 `0.1.1` / versionCode `2`；原设置页版本为 `0.1.2` / versionCode `3`，当前 Miuix 设置页为 `0.1.3` / versionCode `4`。保留既有交付文件及校验值。
 
 后续检查与编译在 GitHub Actions 执行，本地不再启动构建。云端使用本模块专属固定签名，私钥通过仓库加密 Secrets 传入，不提交到 Git。首次从本地 `0.1.0` 测试包转到云端包时，两者签名不同，需要手动卸载旧测试包后安装；后续云端包可连续更新。
 
@@ -50,7 +52,7 @@ GitHub Actions 使用 JDK 21、Android SDK 37.0、Gradle 9.4.1、Android Gradle 
 
 云端测试覆盖计数、过滤和去重、配置持久化与连接时序、实际设置 Activity 的开关交互，以及原方法执行、异常传播、Android 17 的 VectorDrawable、黑白切换和 overlay 子节点隔离。具体通过数量及构建记录以交付收据为准。
 
-用户已自行安装首个 `0.1.0` 测试 APK，并反馈实际效果可用。这证明首版已在该手机生效，尚未逐项完成通知分组、清除、空间切换及所有主题的真机回归。云端版本以 Actions 检查为依据，开发过程未操作手机；0.1.2 的各分类与开关对应关系仍需用户真机测试。
+用户已自行安装测试 APK，并反馈当前 0.1.2 使用效果可用，继续自行调试分类关系。0.1.3 仅重构设置界面，Hook 与计数分类保持原版。新版云端检查不能替代该 ROM 上的页面和通知逐项测试，开发过程未操作手机。
 
 ## 接口依据
 
@@ -59,3 +61,4 @@ GitHub Actions 使用 JDK 21、Android SDK 37.0、Gradle 9.4.1、Android Gradle 
 - [libxposed service 102.0.0 官方 Maven 发布](https://central.sonatype.com/artifact/io.github.libxposed/service/102.0.0)
 - [AGP 9.2 支持 Android API 37.0](https://developer.android.com/build/releases/agp-9-2-0-release-notes)
 - [Robolectric 4.17 支持 SDK 37](https://github.com/robolectric/robolectric/releases/tag/robolectric-4.17)
+- [Miuix 0.9.4 组件源码](https://github.com/compose-miuix-ui/miuix/tree/v0.9.4)

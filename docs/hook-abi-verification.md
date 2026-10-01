@@ -132,7 +132,7 @@ protected final void setMeasuredDimension(int, int);
 - 必要 ZIP 文件存在且不重复；没有旧 `assets/xposed_init` 等入口。
 - 模块 DEX/散装 class 没有打包 `io.github.libxposed.api` 或旧 `de.robv.android.xposed` 的类定义。DEX 对框架 API 的引用允许存在。
 
-**Manifest 的 Android 组件、权限及旧 manifest 元数据由 `verify_release.py` 使用 aapt XML 另查。** 0.1.2 只允许模块设置 Activity 与官方 libxposed 服务 provider，要求只有管理器的设置入口、没有桌面入口或额外权限。`verify_module.py` 本身只确认 AndroidManifest.xml 存在，也不检查 APK 签名、安装状态或当前源代码是否与某次已构建 APK 逐项一致。交付的固定签名、版本、commit 与 APK 校验值以 Actions 生成收据为准。
+**Manifest 的 Android 组件、权限及旧 manifest 元数据由 `verify_release.py` 使用 aapt XML 另查。** 只允许模块设置 Activity 与官方 libxposed 服务 provider，要求只有管理器的设置入口、没有桌面入口或额外权限。0.1.3 的 Miuix / AndroidX 依赖另允许两条指定名称且 `required=false` 的 Window 扩展库声明，不增加组件。`verify_module.py` 本身只确认 AndroidManifest.xml 存在，也不检查 APK 签名、安装状态或当前源代码是否与某次已构建 APK 逐项一致。交付的固定签名、版本、commit 与 APK 校验值以 Actions 生成收据为准。
 
 ## 证据范围
 

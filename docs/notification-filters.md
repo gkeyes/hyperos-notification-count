@@ -30,6 +30,8 @@
 
 设置 Activity 只声明 `MAIN` + `de.robv.android.xposed.category.MODULE_SETTINGS`，没有 LAUNCHER。已对齐用户框架 [Vector canary 3111](https://github.com/JingMatrix/Vector/releases/tag/canary-3111) 的 [模块设置查找实现](https://github.com/JingMatrix/Vector/blob/efb82883071643ca16128ecd588be7c40c1e45e6/manager/src/main/kotlin/org/matrix/vector/manager/ipc/DaemonClient.kt#L70-L96)。
 
+0.1.3 起使用 Miuix 0.9.4 的标准设置项与主题，三组 15 项开关继续使用原有稳定位值。整行与右侧开关由 `SwitchPreference` 处理触摸；读屏合并为一个带说明、勾选状态和可用状态的开关。页面按生命周期订阅同一 `SettingsStore`，停用页面时移除订阅，返回时获取最新状态。
+
 API 102 远程偏好以原子 int mask 存储，位值在 enum 中固定，不使用 ordinal。SystemUI 强引用 listener 并把配置变化转到主线程；[Vector 的监听实现](https://github.com/JingMatrix/Vector/blob/efb82883071643ca16128ecd588be7c40c1e45e6/xposed/src/main/kotlin/org/matrix/vector/impl/VectorRemotePreferences.kt#L27-L87) 按 [Android 用户隔离分发](https://github.com/JingMatrix/Vector/blob/efb82883071643ca16128ecd588be7c40c1e45e6/daemon/src/main/kotlin/org/matrix/vector/daemon/ipc/InjectedModuleService.kt#L29-L93)。只有 `com.android.systemui` 的静态推荐作用域，不增加模块自身或其他应用。
 
 这些判据有宿主 DEX 声明与源码路径依据；云端测试不能代替这版 ROM 上的真实通知测试。建议全关作为基线，每次只开一项，观察数字变化后恢复，再测试下一项。

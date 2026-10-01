@@ -8,8 +8,9 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import zipfile
 
-from verify_module import MODULE_ROOT, require, verify_module_apk
+from verify_module import ApkDex, MODULE_ROOT, require, verify_module_apk
 
 
 def run(*arguments):
@@ -48,13 +49,21 @@ def verify_settings_manifest(xmltree, badging):
     require(Counter(node["name"] for node in nodes) == Counter({
         "manifest": 1, "uses-sdk": 1, "application": 1, "activity": 1,
         "intent-filter": 1, "action": 1, "category": 1, "provider": 1,
+        "uses-library": 2,
     }), "Only the module settings activity and official libxposed provider may be packaged; no permissions")
     by_name = {node["name"]: node for node in nodes}
     application = by_name["application"]
     require(application["attributes"].get("android:name") ==
             "dev.hyperos.notificationcount.settings.ModuleApplication", "Unexpected module application")
-    require({child["name"] for child in application["children"]} == {"activity", "provider"},
+    require({child["name"] for child in application["children"]} == {"activity", "provider", "uses-library"},
             "Unexpected application child")
+    libraries = [node for node in nodes if node["name"] == "uses-library"]
+    require({node["attributes"].get("android:name") for node in libraries} ==
+            {"androidx.window.extensions", "androidx.window.sidecar"}, "Unexpected optional window library")
+    for library in libraries:
+        require(library["attributes"].get("android:required", "").endswith("0x0"),
+                "AndroidX window extensions must remain optional")
+        require(not library["children"], "Unexpected window library configuration")
     activity = by_name["activity"]
     require(activity["attributes"].get("android:name") ==
             "dev.hyperos.notificationcount.settings.SettingsActivity", "Unexpected settings activity")
@@ -80,6 +89,24 @@ def verify_settings_manifest(xmltree, badging):
             "The module must not expose a desktop launcher icon")
 
 
+def verify_settings_ui(apk):
+    with zipfile.ZipFile(apk) as archive:
+        dex = ApkDex(archive)
+        activity = "Ldev/hyperos/notificationcount/settings/SettingsActivity;"
+        require(activity in dex.classes, "Missing settings activity implementation")
+        require(dex.classes[activity].classes[activity]["parent"] == "Landroidx/activity/ComponentActivity;",
+                "Settings must use the Compose activity implementation")
+        for component in (
+            "basic/CardKt", "basic/SmallTitleKt", "basic/TopAppBarKt", "basic/ButtonKt",
+            "preference/SwitchPreferenceKt", "theme/MiuixThemeKt",
+        ):
+            require(f"Ltop/yukonga/miuix/kmp/{component};" in dex.classes,
+                    f"Missing official Miuix component: {component}")
+        require(not any(name.startswith(("Lorg/junit/", "Lorg/robolectric/", "Landroidx/compose/ui/test/"))
+                        for name in dex.classes), "UI test libraries must not be packaged in the release")
+    print("Settings UI verified: Compose activity and official Miuix component definitions; no test classes")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apk", required=True, type=Path)
@@ -87,6 +114,7 @@ def main():
     parser.add_argument("--signed", action="store_true")
     arguments = parser.parse_args()
     info = verify_module_apk(arguments.apk)
+    verify_settings_ui(arguments.apk)
     badging = run(arguments.build_tools / "aapt", "dump", "badging", arguments.apk)
     manifest = run(arguments.build_tools / "aapt", "dump", "xmltree", arguments.apk, "AndroidManifest.xml")
     package = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
@@ -133,6 +161,7 @@ def main():
         f"apk_sha256={info['sha256']}\ncertificate_sha256={expected_certificate}\n"
         "scope=com.android.systemui\napi=102\ndebuggable=false\n"
         "settings=module-manager-only\nlauncher=false\nfilters=15\n"
+        "settings_ui=miuix\nmiuix_version=0.9.4\n"
     )
     (outputs / "BUILD_RECEIPT.txt").write_text(receipt)
     print(f"Fixed signer verified; prepared {name}, SHA-256 {info['sha256']}")
