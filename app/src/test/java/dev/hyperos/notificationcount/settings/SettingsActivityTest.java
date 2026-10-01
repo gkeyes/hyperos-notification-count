@@ -94,7 +94,11 @@ public class SettingsActivityTest {
         openActivity();
         int mask = 0;
         for (NotificationType type : NotificationType.values()) {
-            assertTrue(type.key, switches().get(type).performClick());
+            Switch toggle = switches().get(type);
+            // CompoundButton toggles before delegating to View.performClick; its return value
+            // describes an OnClickListener, whereas this screen uses OnCheckedChangeListener.
+            toggle.performClick();
+            assertTrue(type.key, toggle.isChecked());
             mask |= type.bit;
             assertEquals(type.key, mask, persisted.getInt(FilterPreferences.EXCLUDED_MASK, 0));
         }
@@ -119,8 +123,10 @@ public class SettingsActivityTest {
         remote.queueCommitResults(false, false);
         application.getSettingsStore().connect(new Object(), () -> remote.preferences);
         openActivity();
-        assertTrue(switches().get(NotificationType.MEDIA).performClick());
+        switches().get(NotificationType.MEDIA).performClick();
         assertMaskAndEnabled(previous, false);
+        assertEquals(previous | NotificationType.MEDIA.bit, remote.committedMasks.get(0).intValue());
+        assertEquals(previous, remote.committedMasks.get(1).intValue());
         for (Switch toggle : switches().values()) {
             assertFalse(((View) toggle.getParent()).isEnabled());
         }
