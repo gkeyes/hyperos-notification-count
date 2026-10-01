@@ -32,6 +32,18 @@ USER_LISTENER = BAR + "NotificationLockscreenUserManager$UserChangedListener"
 COLLECTION_LISTENER = COLLECTION + "notifcollection.NotifCollectionListener"
 RENDER_LISTENER = COLLECTION + "listbuilder.OnBeforeRenderListListener"
 MODULE_ENTRY = "dev.hyperos.notificationcount.NotificationCountModule"
+NOTIFICATION = BAR + "notification."
+WRAPPER = NOTIFICATION + "ExpandedNotification"
+PIPELINE_ENTRY = COLLECTION + "PipelineEntry"
+ATTACH_STATE = COLLECTION + "ListAttachState"
+SECTION = COLLECTION + "listbuilder.NotifSection"
+SECTION_STYLE = COLLECTION + "provider.SectionStyleProvider"
+PRIORITY = COLLECTION + "provider.HighPriorityProvider"
+FOCUS_UTILS = NOTIFICATION + "utils.FocusUtils"
+NOTIF_UTIL = NOTIFICATION + "utils.NotificationUtil"
+HEADS_UP = NOTIFICATION + "headsup.HeadsUpManagerImpl"
+PINNED = NOTIFICATION + "headsup.PinnedStatus"
+RENDERED = NOTIFICATION + "domain.interactor.RenderNotificationListInteractor"
 
 
 def ref(name):
@@ -46,6 +58,8 @@ EXPECTED_TYPES = {
     BAR + "phone.PhoneStatusBarView", BAR + "pipeline.shared.ui.viewmodel.HomeStatusBarViewModel",
     CONTAINER, BAR + "StatusBarIconView", MONITOR, INJECT, DISPATCHER, RECEIVER,
     "kotlin.jvm.functions.Function1",
+    WRAPPER, PIPELINE_ENTRY, ATTACH_STATE, SECTION, SECTION_STYLE, PRIORITY,
+    FOCUS_UTILS, NOTIF_UTIL, HEADS_UP, HEADS_UP + "$HeadsUpEntry", PINNED, RENDERED,
 }
 EXPECTED_FIELDS = {
     (PIPELINE, "mNotifCollection"): ref(COLLECTION + "NotifCollection"),
@@ -63,6 +77,16 @@ EXPECTED_FIELDS = {
     (INJECT, "showNotificationIcons"): "I",
     (INJECT, "_islandMonitor"): ref(MONITOR),
     (MONITOR, "islandWidth"): "I",
+    (WRAPPER, "mIsFocusNotification"): "Z",
+    (WRAPPER, "mIsPromotedOngoing"): "Z",
+    (WRAPPER, "mIsFold"): "Z",
+    (PIPELINE_ENTRY, "attachState"): ref(ATTACH_STATE),
+    (ATTACH_STATE, "section"): ref(SECTION),
+    (SECTION, "bucket"): "I",
+    (SECTION, "sectioner"): ref(COLLECTION + "listbuilder.pluggable.NotifSectioner"),
+    (SECTION_STYLE, "silentSections"): "Ljava/util/Set;",
+    (SECTION_STYLE, "highPriorityProvider"): ref(PRIORITY),
+    (RENDERED, "sectionStyleProvider"): ref(SECTION_STYLE),
 }
 EXPECTED_METHODS = {
     (PIPELINE, "addCollectionListener", (ref(COLLECTION_LISTENER),)): "V",
@@ -89,13 +113,22 @@ EXPECTED_METHODS = {
     (DISPATCHER, "getTint", ("Ljava/util/Collection;", "Landroid/view/View;", "I")): "I",
     (CONTAINER, "getActualPaddingStart", ()): "F",
     (CONTAINER, "getActualPaddingEnd", ()): "F",
+    (FOCUS_UTILS, "isUpdatableFocusNotification", ("Landroid/app/Notification;",)): "Z",
+    (WRAPPER, "isPersistent", ()): "Z",
+    (ENTRY, "isClearable", ()): "Z",
+    (ENTRY, "isRowPinned", ()): "Z",
+    (NOTIF_UTIL, "isMiuiMediaNotification", (ref(ENTRY),)): "Z",
+    (PRIORITY, "isHighPriorityConversation", (ref(PIPELINE_ENTRY),)): "Z",
+    (NOTIF_UTIL, "setFold", (ref(ENTRY), "Z")): "V",
+    (HEADS_UP, "setEntryPinned", (ref(HEADS_UP + "$HeadsUpEntry"), ref(PINNED), "Ljava/lang/String;")): "V",
+    (RENDERED, "setRenderedList", ("Ljava/util/List;",)): "V",
 }
 SDK_METHOD = ("android.view.View", "setMeasuredDimension", ("I", "I"))
 HOOK_METHODS = {
     key for key in EXPECTED_METHODS
     if key[1] in {"attach", "dispatchEventsAndRebuildList", "bind", "onUnbind", "onMeasure",
                   "onLayout", "onConfigurationChanged", "setMaxIconsAmount", "onDraw", "updateContainerSize",
-                  "dismissNotifications", "dismissAllNotifications"}
+                  "dismissNotifications", "dismissAllNotifications", "setFold", "setEntryPinned", "setRenderedList"}
 }
 DEOPT_METHODS = {key for key in EXPECTED_METHODS
                  if key[1] in {"dismissNotifications", "dismissAllNotifications"}}
@@ -261,7 +294,7 @@ def source_targets():
     types, fields, methods, hooks, deopts = set(), set(), set(), set(), set()
     primitive = {"int": "I", "boolean": "Z", "float": "F", "long": "J", "double": "D",
                  "byte": "B", "char": "C", "short": "S", "void": "V"}
-    for filename in ("SystemUiHooks.java", "StatusBarRenderer.java", "HostAccess.java"):
+    for filename in ("SystemUiHooks.java", "StatusBarRenderer.java", "HostAccess.java", "NotificationClassifier.java"):
         path = MODULE_ROOT / "app/src/main/java/dev/hyperos/notificationcount/hook" / filename
         text = path.read_text()
         text = re.sub(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/',

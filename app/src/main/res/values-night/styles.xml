@@ -1,0 +1,14 @@
+<resources>
+    <style name="SettingsTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#9CBCFF</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+    <color name="settings_background">#11151D</color>
+    <color name="settings_surface">#1C222D</color>
+    <color name="settings_text">#E8EBF2</color>
+    <color name="settings_secondary">#A9B2C2</color>
+    <color name="settings_accent">#9CBCFF</color>
+</resources>

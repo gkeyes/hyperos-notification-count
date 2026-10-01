@@ -6,7 +6,7 @@ import android.util.Log;
 import dev.hyperos.notificationcount.hook.SystemUiHooks;
 import io.github.libxposed.api.XposedModule;
 
-/** Modern API 102 entry. No launcher, settings activity or secondary package scope. */
+/** Modern API 102 entry. Only the main SystemUI process is hooked. */
 public final class NotificationCountModule extends XposedModule {
     public static final String TARGET_PACKAGE = "com.android.systemui";
     public static final String TAG = "HyperOSNotificationCount";

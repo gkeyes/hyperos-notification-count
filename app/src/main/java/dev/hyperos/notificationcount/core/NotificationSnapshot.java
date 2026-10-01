@@ -11,6 +11,7 @@ public final class NotificationSnapshot {
     public final boolean currentProfile;
     public final boolean dismissed;
     public final boolean canceled;
+    public final int typeMask;
 
     public NotificationSnapshot(
             String key,
@@ -20,6 +21,18 @@ public final class NotificationSnapshot {
             boolean currentProfile,
             boolean dismissed,
             boolean canceled) {
+        this(key, userId, groupKey, summary, currentProfile, dismissed, canceled, 0);
+    }
+
+    public NotificationSnapshot(
+            String key,
+            int userId,
+            String groupKey,
+            boolean summary,
+            boolean currentProfile,
+            boolean dismissed,
+            boolean canceled,
+            int typeMask) {
         this.key = Objects.requireNonNull(key, "key");
         this.userId = userId;
         this.groupKey = groupKey;
@@ -27,5 +40,6 @@ public final class NotificationSnapshot {
         this.currentProfile = currentProfile;
         this.dismissed = dismissed;
         this.canceled = canceled;
+        this.typeMask = typeMask;
     }
 }

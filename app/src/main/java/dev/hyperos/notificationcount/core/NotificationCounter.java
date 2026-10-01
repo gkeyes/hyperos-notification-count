@@ -12,11 +12,18 @@ public final class NotificationCounter {
     }
 
     public static int count(Collection<NotificationSnapshot> snapshots) {
+        return count(snapshots, 0);
+    }
+
+    /** Excludes an entry if any of its type bits matches an enabled filter. */
+    public static int count(Collection<NotificationSnapshot> snapshots, int excludedMask) {
         Map<String, NotificationSnapshot> latestByKey = new LinkedHashMap<>();
         for (NotificationSnapshot snapshot : snapshots) {
             latestByKey.put(snapshot.key, snapshot);
         }
 
+        // Pair summaries before type filtering. Excluding a real child must not make
+        // its summary contribute a replacement count.
         Set<GroupIdentity> groupsWithChildren = new HashSet<>();
         for (NotificationSnapshot snapshot : latestByKey.values()) {
             if (isEligible(snapshot) && !snapshot.summary && snapshot.groupKey != null) {
@@ -27,6 +34,9 @@ public final class NotificationCounter {
         int count = 0;
         for (NotificationSnapshot snapshot : latestByKey.values()) {
             if (!isEligible(snapshot)) {
+                continue;
+            }
+            if ((snapshot.typeMask & excludedMask) != 0) {
                 continue;
             }
             if (snapshot.summary && snapshot.groupKey != null

@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.content.res.Configuration;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.service.notification.StatusBarNotification;
@@ -20,6 +21,7 @@ import java.util.List;
 import dev.hyperos.notificationcount.NotificationCountModule;
 import dev.hyperos.notificationcount.core.NotificationCounter;
 import dev.hyperos.notificationcount.core.NotificationSnapshot;
+import dev.hyperos.notificationcount.settings.FilterPreferences;
 import io.github.libxposed.api.XposedInterface;
 
 /** All hooks are process local, and notification snapshots are read on the main thread. */
@@ -31,6 +33,12 @@ public final class SystemUiHooks {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final HostAccess access;
     private final StatusBarRenderer renderer;
+    private final NotificationClassifier classifier;
+    private SharedPreferences filterPreferences;
+    // Framework listeners are weakly held. Keep this callback alive for the injected process.
+    private final SharedPreferences.OnSharedPreferenceChangeListener filterListener = (preferences, key) -> {
+        if (key == null || FilterPreferences.EXCLUDED_MASK.equals(key)) requestRefresh();
+    };
     private final List<XposedInterface.HookHandle> handles = new ArrayList<>();
     private final Class<?> pipelineType;
     private final Class<?> collectionType;
@@ -63,6 +71,7 @@ public final class SystemUiHooks {
     public SystemUiHooks(NotificationCountModule module, ClassLoader loader) throws Throwable {
         this.module = module;
         access = new HostAccess(loader);
+        classifier = new NotificationClassifier(access);
         pipelineType = access.type(COLLECTION + "NotifPipeline");
         collectionType = access.type(COLLECTION + "NotifCollection");
         coordinatorType = access.type(COLLECTION + "coordinator.HideNotifsForOtherUsersCoordinator");
@@ -115,7 +124,18 @@ public final class SystemUiHooks {
         Class<?> monitor = access.type(BAR + "IslandMonitor$NotificationContainerIslandMonitor");
         Field monitorContainer = HostAccess.field(monitor, "container");
         Method island = HostAccess.method(monitor, "updateContainerSize", Rect.class, boolean.class, boolean.class);
+        Class<?> utility = access.type(BAR + "notification.utils.NotificationUtil");
+        Method fold = HostAccess.method(utility, "setFold", entryType, boolean.class);
+        Class<?> headsUp = access.type(BAR + "notification.headsup.HeadsUpManagerImpl");
+        Method pin = HostAccess.method(headsUp, "setEntryPinned",
+                access.type(BAR + "notification.headsup.HeadsUpManagerImpl$HeadsUpEntry"),
+                access.type(BAR + "notification.headsup.PinnedStatus"), String.class);
+        Class<?> renderedType = access.type(BAR + "notification.domain.interactor.RenderNotificationListInteractor");
+        Field sectionStyle = HostAccess.field(renderedType, "sectionStyleProvider");
+        Method rendered = HostAccess.method(renderedType, "setRenderedList", List.class);
         try {
+            filterPreferences = module.getRemotePreferences(FilterPreferences.GROUP);
+            filterPreferences.registerOnSharedPreferenceChangeListener(filterListener);
             // These local-dismiss callers must reach the central refresh even while rendering is deferred.
             boolean dismissDeoptimized = module.deoptimize(dismiss);
             boolean clearDeoptimized = module.deoptimize(dismissAll);
@@ -141,12 +161,19 @@ public final class SystemUiHooks {
             after(configuration, chain -> renderer.configuration((View) chain.getThisObject()));
             after(maxIcons, chain -> renderer.layoutAndRequest((View) chain.getThisObject()));
             after(island, chain -> renderer.layout((View) monitorContainer.get(chain.getThisObject())));
+            after(fold, chain -> requestRefresh());
+            after(pin, chain -> requestRefresh());
+            after(rendered, chain -> {
+                classifier.setSectionStyle(sectionStyle.get(chain.getThisObject()));
+                requestRefresh();
+            });
             handles.add(module.hook(drawIcon).setId("notification-count/draw")
                     .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                     .intercept(new ClippedDrawHook(renderer::suppressIcon)));
         } catch (Throwable error) {
             for (XposedInterface.HookHandle handle : handles) handle.unhook();
             handles.clear();
+            if (filterPreferences != null) filterPreferences.unregisterOnSharedPreferenceChangeListener(filterListener);
             throw error;
         }
     }
@@ -220,6 +247,7 @@ public final class SystemUiHooks {
 
     @SuppressWarnings("deprecation") // Public SDK accessor; UserHandle.getIdentifier is not in SDK 37 stubs.
     private void refreshNow() throws Throwable {
+        int excludedMask = FilterPreferences.read(filterPreferences);
         Collection<?> current = (Collection<?>) HostAccess.call(getAllNotifs, pipeline);
         List<NotificationSnapshot> snapshots = new ArrayList<>(current.size());
         // getAllNotifs is a live view, so never retain it or its entries after this main-thread read.
@@ -230,9 +258,10 @@ public final class SystemUiHooks {
             boolean profile = (boolean) HostAccess.call(currentProfile, users, userId);
             snapshots.add(new NotificationSnapshot(sbn.getKey(), userId, sbn.getGroupKey(),
                     (sbn.getNotification().flags & Notification.FLAG_GROUP_SUMMARY) != 0, profile,
-                    entryDismiss.get(entry) != notDismissed, entryCancellation.getInt(entry) != -1));
+                    entryDismiss.get(entry) != notDismissed, entryCancellation.getInt(entry) != -1,
+                    classifier.classify(entry, sbn, excludedMask)));
         }
-        renderer.setCount(NotificationCounter.count(snapshots), true);
+        renderer.setCount(NotificationCounter.count(snapshots, excludedMask), true);
     }
 
     private void fail(Throwable error) {

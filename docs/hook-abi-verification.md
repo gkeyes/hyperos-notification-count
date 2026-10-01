@@ -31,7 +31,7 @@ python3 tools/verify_module.py \
 
 ## 当前宿主声明结果
 
-2026-10-01 对已提取 SystemUI APK 的原始 DEX 校验通过：20 个 `HostAccess.type` 类型、15 个反射字段、21 个宿主方法；其中 12 个 Hook 方法、2 个反优化方法都有具体 DEX 方法体。SDK `View.setMeasuredDimension` 另计 1 个。
+2026-10-01 对已提取 SystemUI APK 的原始 DEX 校验通过：32 个 `HostAccess.type` 类型、25 个反射字段、30 个宿主方法；其中 15 个 Hook 方法、2 个反优化方法都有具体 DEX 方法体。SDK `View.setMeasuredDimension` 另计 1 个。
 
 SystemUI APK SHA-256：
 
@@ -39,7 +39,9 @@ SystemUI APK SHA-256：
 7da817a4c65299f7362fd530d72c09c0a4785c98cf2732395c721f2740e7662a
 ```
 
-脚本只读取当前三个源文件：`SystemUiHooks.java`、`StatusBarRenderer.java`、`HostAccess.java`。它从 String 常量、Class 变量和反射调用提取目标，并与脚本内的小型 ABI 清单比较；新增或替换目标而没有更新清单时会失败。清单不包含系统实现代码。
+脚本读取 `SystemUiHooks.java`、`StatusBarRenderer.java`、`HostAccess.java`、`NotificationClassifier.java`。它从 String 常量、Class 变量和反射调用提取目标，并与脚本内的小型 ABI 清单比较；新增或替换目标而没有更新清单时会失败。清单不包含系统实现代码。
+
+0.1.2 的分类新增 10 个字段与 9 个方法，完整类型/描述符保存在脚本的 ABI 清单中。`FocusUtils` owner 是 `notification.utils.FocusUtils`；高优先级会话方法参数是 `PipelineEntry`。新增 3 个 Hook 为 `NotificationUtil.setFold(NotificationEntry, boolean)`、`HeadsUpManagerImpl.setEntryPinned(HeadsUpEntry, PinnedStatus, String)`、`RenderNotificationListInteractor.setRenderedList(List)`，全部完成原调用后刷新。分类口径见 [通知过滤说明](notification-filters.md)。以下表格保留原显示层的 15 个字段及 21 个方法。
 
 下表的名称使用以下前缀缩写：
 
@@ -100,7 +102,7 @@ SystemUI APK SHA-256：
 
 四个 Proxy 目标 `NotificationLockscreenUserManager$UserChangedListener`、`NotifCollectionListener`、`OnBeforeRenderListListener`、`DarkIconDispatcher$DarkReceiver` 均是 DEX interface，有声明的 callback，callback 返回值全部为 void。`DarkReceiver.onDarkChanged(java.util.ArrayList, float, int)` 还按参数完整签名单独核对。
 
-已解析的 20 个类型还包括以上类、`NotificationEntry$DismissState`、`PhoneStatusBarView`、`HomeStatusBarViewModel` 和 `kotlin.jvm.functions.Function1`；类型/成员清单在脚本内可直接审阅，`--json` 会列出成员所属 DEX 与 access flags。
+原显示层 20 个类型还包括以上类、`NotificationEntry$DismissState`、`PhoneStatusBarView`、`HomeStatusBarViewModel` 和 `kotlin.jvm.functions.Function1`；新增分类与刷新类型另计 12 个。类型/成员清单在脚本内可直接审阅，`--json` 会列出成员所属 DEX 与 access flags。
 
 ### Android SDK 父类例外
 
@@ -116,7 +118,7 @@ protected final void setMeasuredDimension(int, int);
 
 ## 模块 APK ZIP/DEX 结果
 
-已校验现有 `app/build/outputs/apk/debug/app-debug.apk`，SHA-256：
+首版归档 `app/build/outputs/apk/debug/app-debug.apk` 已做以下 ZIP/DEX 校验，SHA-256（不是 0.1.2 的交付校验值）：
 
 ```text
 57ea94e49e653625653b7cf1354be02f00ac09ecd085720c2afcf5dfa0cc14e2
@@ -130,7 +132,7 @@ protected final void setMeasuredDimension(int, int);
 - 必要 ZIP 文件存在且不重复；没有旧 `assets/xposed_init` 等入口。
 - 模块 DEX/散装 class 没有打包 `io.github.libxposed.api` 或旧 `de.robv.android.xposed` 的类定义。DEX 对框架 API 的引用允许存在。
 
-**Manifest 的 Android 组件、权限及旧 manifest 元数据需要主流程另外使用 aapt XML 检查。** 此脚本只确认 AndroidManifest.xml 存在，不把 ZIP 或 DEX 检查表述为已经证明“没有组件/权限”。它也不检查 APK 签名、安装状态或当前源代码是否与某次已构建 APK 逐项一致。
+**Manifest 的 Android 组件、权限及旧 manifest 元数据由 `verify_release.py` 使用 aapt XML 另查。** 0.1.2 只允许模块设置 Activity 与官方 libxposed 服务 provider，要求只有管理器的设置入口、没有桌面入口或额外权限。`verify_module.py` 本身只确认 AndroidManifest.xml 存在，也不检查 APK 签名、安装状态或当前源代码是否与某次已构建 APK 逐项一致。交付的固定签名、版本、commit 与 APK 校验值以 Actions 生成收据为准。
 
 ## 证据范围
 
