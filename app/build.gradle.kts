@@ -61,6 +61,8 @@ dependencies {
     testImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("androidx.test.ext:junit:1.3.0")
+    // 3.7 uses getSystemService; older transitive Espresso reflects a removed SDK 37 method.
+    testImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }
 
 tasks.withType<Test>().configureEach {
