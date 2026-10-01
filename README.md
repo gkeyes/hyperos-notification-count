@@ -54,7 +54,9 @@ GitHub Actions 使用 JDK 21、Android SDK 37.0、Gradle 9.4.1、Android Gradle 
 
 云端测试覆盖计数、过滤和去重、配置持久化与连接时序、实际设置 Activity 的开关交互，以及原方法执行、异常传播、Android 17 的 VectorDrawable、黑白切换和 overlay 子节点隔离。具体通过数量及构建记录以交付收据为准。
 
-压缩版另在 GitHub 的 Android 17 模拟器上运行同一固定签名 release APK，使用真实 Application、provider 和 Miuix Activity；测试私有偏好模拟框架连接，检查 15 项开关的保存、重建、重置、断线禁用，以及数字 0 / 1–9 / 溢出在黑白 tint 下的绘制。模拟器没有 HyperOS / LSPosed，不代表 SystemUI Hook 已在真机回归。
+压缩版保留 Android 17 release 模拟器测试，可在手动触发 Actions 时选择 `release_runtime_checks`。它使用真实 Application、provider 和 Miuix Activity，测试私有偏好模拟框架连接，检查 15 项开关的保存、重建、重置、断线禁用，以及数字 0 / 1–9 / 溢出在黑白 tint 下的绘制；启用时仍必须完整通过这 3 项测试。
+
+当前 Google API 37 模拟器的 SurfaceFlinger 在模块安装前即出现 `hasReadColorBufferDma` 图形断言，连带重启系统进程，阻止安装和测试执行；因此本次不以该实验环境阻塞发布，收据明确标记 `release_runtime=not-tested`。云端 release 功能单测、实际 APK 的入口 ABI / 作用域、Miuix / 矢量保留、优化和固定签名检查仍按原要求执行。模拟器没有 HyperOS / LSPosed，真机 SystemUI Hook 回归也仍未执行。
 
 用户已自行安装测试 APK，并反馈当前 0.1.2 使用效果可用，继续自行调试分类关系。0.1.3 重构设置界面，0.1.4 优化打包体积，Hook 与计数分类保持原版。新版云端检查不能替代该 ROM 上的页面和通知逐项测试，开发过程未操作手机。
 

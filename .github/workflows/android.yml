@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_runtime_checks:
+        description: Run the optional Android 17 emulator checks
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -46,7 +52,7 @@ jobs:
           MODULE_KEYSTORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.MODULE_KEYSTORE_PASSWORD || '' }}
         run: ./gradlew :app:assembleRelease --console=plain
       - name: Build release runtime test package
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' && inputs.release_runtime_checks
         env:
           MODULE_KEYSTORE_PASSWORD: ${{ secrets.MODULE_KEYSTORE_PASSWORD }}
         run: ./gradlew :app:assembleReleaseAndroidTest --console=plain
@@ -60,21 +66,25 @@ jobs:
           python3 tools/verify_module.py --apk "$apk"
           python3 tools/verify_release.py --apk "$apk" --mapping app/build/outputs/mapping/release/mapping.txt --build-tools "$ANDROID_HOME/build-tools/37.0.0" ${MODULE_KEYSTORE_PATH:+--signed}
           python3 tools/verify_optimization.py --apk "$apk" --mapping app/build/outputs/mapping/release/mapping.txt --configuration app/build/outputs/mapping/release/configuration.txt ${MODULE_KEYSTORE_PATH:+--signed}
+      - name: Record runtime verification boundary
+        if: github.event_name != 'pull_request' && !(github.event_name == 'workflow_dispatch' && inputs.release_runtime_checks)
+        run: |
+          printf '%s\n' 'release_runtime=not-tested' 'release_runtime_reason=api37-emulator-graphics-failure' 'phone_systemui_runtime=not-tested' >> outputs/BUILD_RECEIPT.txt
       - name: Save verified build before runtime checks
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' && inputs.release_runtime_checks
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: verified-build-runtime-pending-${{ github.run_number }}
           path: outputs/
           if-no-files-found: error
       - name: Enable emulator acceleration
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' && inputs.release_runtime_checks
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Test the signed shrunk APK on Android 17
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' && inputs.release_runtime_checks
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
           MODULE_KEYSTORE_PASSWORD: ${{ secrets.MODULE_KEYSTORE_PASSWORD }}
@@ -90,7 +100,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader -feature -GLDirectMem,-HasSharedSlotsHostMemoryAllocator -noaudio -no-boot-anim -camera-back none
           script: bash tools/run_release_smoke.sh
       - name: Verify release runtime results and identical delivery APK
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' && inputs.release_runtime_checks
         run: python3 tools/verify_smoke_results.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: github.event_name != 'pull_request'
