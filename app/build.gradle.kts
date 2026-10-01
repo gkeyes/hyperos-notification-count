@@ -11,8 +11,9 @@ android {
         applicationId = "dev.hyperos.notificationcount"
         minSdk = 37
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.1.4"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures {
         buildConfig = true
@@ -36,9 +37,15 @@ android {
             if (cloudKeystore != null) signingConfig = signingConfigs.getByName("cloud")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (cloudKeystore != null) signingConfig = signingConfigs.getByName("cloud")
         }
+    }
+    packaging {
+        // Compress the installable APK's DEX; Android extracts it during installation.
+        dex { useLegacyPackaging = true }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -63,6 +70,11 @@ dependencies {
     testImplementation("androidx.test.ext:junit:1.3.0")
     // 3.7 uses getSystemService; older transitive Espresso reflects a removed SDK 37 method.
     testImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }
 
 tasks.withType<Test>().configureEach {

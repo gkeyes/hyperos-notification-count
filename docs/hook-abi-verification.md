@@ -134,6 +134,10 @@ protected final void setMeasuredDimension(int, int);
 
 **Manifest 的 Android 组件、权限及旧 manifest 元数据由 `verify_release.py` 使用 aapt XML 另查。** 只允许模块设置 Activity 与官方 libxposed 服务 provider，要求只有管理器的设置入口、没有桌面入口或额外权限。0.1.3 的 Miuix / AndroidX 依赖另允许两条指定名称且 `required=false` 的 Window 扩展库声明，不增加组件。`verify_module.py` 本身只确认 AndroidManifest.xml 存在，也不检查 APK 签名、安装状态或当前源代码是否与某次已构建 APK 逐项一致。交付的固定签名、版本、commit 与 APK 校验值以 Actions 生成收据为准。
 
+0.1.4 开启 R8 后，模块自有小包保持类名及成员，依赖库参与裁剪和混淆。产物检查进一步要求模块入口及两个 Hooker 是 public / concrete，入口具有 public 无参构造，API 102 的 `onModuleLoaded(ModuleLoadedParam)`、`onPackageReady(PackageReadyParam)` 及两个 `intercept(Chain): Object` 都是 public 实例方法且含实际 DEX 代码。未将 compileOnly 的框架 API 打包。
+
+APK 的 DEX 使用 DEFLATED，native `.so` 仍保留原包装。所取证的 Vector 提交 `efb82883071643ca16128ecd588be7c40c1e45e6` 使用 [ZIP 解压流读取 classes.dex](https://github.com/JingMatrix/Vector/blob/efb82883071643ca16128ecd588be7c40c1e45e6/daemon/src/main/kotlin/org/matrix/vector/daemon/data/FileSystem.kt#L358)，再从 SharedMemory 的 ByteBuffer 创建模块 ClassLoader，没有要求 DEX 必须是 ZIP STORED。这是框架源码兼容性依据，不能替代用户设备加载该版本模块的运行证据。
+
 ## 证据范围
 
 这些结果只证明指定 APK 的类/字段/方法声明及模块入口打包约定满足当前代码要求。它们不证明 Vector/LSPosed 实际加载、ART Hook 命中、反优化成功、通知生命周期表现、状态栏交互或真实设备运行。云端 `--apk` 通过也不代表完成私有宿主 DEX 复核。

@@ -53,7 +53,30 @@ jobs:
             apk=app/build/outputs/apk/release/app-release-unsigned.apk
           fi
           python3 tools/verify_module.py --apk "$apk"
-          python3 tools/verify_release.py --apk "$apk" --build-tools "$ANDROID_HOME/build-tools/37.0.0" ${MODULE_KEYSTORE_PATH:+--signed}
+          python3 tools/verify_release.py --apk "$apk" --mapping app/build/outputs/mapping/release/mapping.txt --build-tools "$ANDROID_HOME/build-tools/37.0.0" ${MODULE_KEYSTORE_PATH:+--signed}
+          python3 tools/verify_optimization.py --apk "$apk" --mapping app/build/outputs/mapping/release/mapping.txt --configuration app/build/outputs/mapping/release/configuration.txt ${MODULE_KEYSTORE_PATH:+--signed}
+      - name: Enable emulator acceleration
+        if: github.event_name != 'pull_request'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test the signed shrunk APK on Android 17
+        if: github.event_name != 'pull_request'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          MODULE_KEYSTORE_PASSWORD: ${{ secrets.MODULE_KEYSTORE_PASSWORD }}
+        with:
+          api-level: '37.0'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: ./gradlew :app:connectedReleaseAndroidTest --console=plain
+      - name: Verify release runtime results and identical delivery APK
+        if: github.event_name != 'pull_request'
+        run: python3 tools/verify_smoke_results.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: github.event_name != 'pull_request'
         with:
@@ -68,4 +91,13 @@ jobs:
           path: |
             app/build/reports/tests/testReleaseUnitTest/
             app/build/test-results/testReleaseUnitTest/
+            app/build/reports/androidTests/connected/
+            app/build/outputs/androidTest-results/connected/
+          if-no-files-found: ignore
+      - name: Save shrinking diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: shrinking-${{ github.run_number }}
+          path: app/build/outputs/mapping/release/
           if-no-files-found: ignore

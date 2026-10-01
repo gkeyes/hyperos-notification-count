@@ -133,6 +133,20 @@ HOOK_METHODS = {
 DEOPT_METHODS = {key for key in EXPECTED_METHODS
                  if key[1] in {"dismissNotifications", "dismissAllNotifications"}}
 
+# Framework-facing ABI, verified against the published api:102.0.0 sources.
+# java_init.list names the entry; these virtual callbacks use the external API descriptors.
+MODULE_ARTIFACT_METHODS = {
+    (MODULE_ENTRY, "<init>", ()): "V",
+    (MODULE_ENTRY, "onModuleLoaded", (
+        "Lio/github/libxposed/api/XposedModuleInterface$ModuleLoadedParam;",)): "V",
+    (MODULE_ENTRY, "onPackageReady", (
+        "Lio/github/libxposed/api/XposedModuleInterface$PackageReadyParam;",)): "V",
+    ("dev.hyperos.notificationcount.hook.AfterHook", "intercept", (
+        "Lio/github/libxposed/api/XposedInterface$Chain;",)): "Ljava/lang/Object;",
+    ("dev.hyperos.notificationcount.hook.ClippedDrawHook", "intercept", (
+        "Lio/github/libxposed/api/XposedInterface$Chain;",)): "Ljava/lang/Object;",
+}
+
 
 def require(condition, message):
     # Do not use Python's assert statement: -O must not disable a packaging gate.
@@ -477,9 +491,30 @@ def verify_module_apk(path):
         entry_dex = dex.classes[ref(MODULE_ENTRY)]
         require(entry_dex.classes[ref(MODULE_ENTRY)]["parent"] == "Lio/github/libxposed/api/XposedModule;",
                 "Modern entry must extend XposedModule")
+        runtime_classes = sorted({owner for owner, _, _ in MODULE_ARTIFACT_METHODS})
+        for owner in runtime_classes:
+            descriptor = ref(owner)
+            require(descriptor in dex.classes, f"Missing module ABI class: {owner}")
+            flags = dex.classes[descriptor].classes[descriptor]["flags"]
+            require(flags & 0x1 and not flags & (0x200 | 0x400),
+                    f"Module ABI class must be public and concrete: {owner}")
+        runtime_methods = []
+        for (owner, name, parameters), returns in MODULE_ARTIFACT_METHODS.items():
+            dex_name, method = dex.method(owner, name, parameters)
+            signature = name + "(" + "".join(parameters) + ")" + returns
+            require(method.returns == returns, f"Wrong module ABI return type: {owner}.{signature}")
+            require(method.flags & 0x1 and not method.flags & (0x8 | 0x100 | 0x400)
+                    and method.code_offset > 0,
+                    f"Module ABI method must be a public, concrete instance method: {owner}.{signature}")
+            if name == "<init>":
+                require(method.flags & 0x10000, f"Module entry lacks a constructor flag: {owner}.{signature}")
+            runtime_methods.append({"owner": owner, "declaration": signature, "dex": dex_name,
+                                    "access_flags": hex(method.flags), "code_present": True})
     return {"sha256": digest(path), "java_entry": MODULE_ENTRY, "scope": ["com.android.systemui"],
             "module_properties": properties, "legacy_zip_entries_absent": True,
             "framework_api_definitions_absent": True, "module_entry_defined": True,
+            "module_runtime_abi": {"public_concrete_classes": runtime_classes,
+                                   "public_concrete_instance_methods": runtime_methods},
             "dex_files": dex.dex_names, "dex_class_definitions": len(dex.classes),
             "manifest_components_permissions": "NOT_CHECKED: inspect AndroidManifest.xml with aapt separately",
             "runtime_hook_hits": "NOT_CHECKED"}
@@ -510,7 +545,8 @@ def main():
             print("SystemUI SHA-256:", result["systemui_abi"]["sha256"])
             print("SDK method:", result["sdk_method"]["evidence"])
         if "module_apk" in result:
-            print("PASS module APK ZIP/DEX metadata:", result["module_apk"]["sha256"])
+            print("PASS module APK ZIP/DEX metadata and API 102 entry/Hooker ABI:",
+                  result["module_apk"]["sha256"])
             print("Manifest components/permissions require separate aapt inspection.")
         print("Static declarations/packaging only; ART hook hits and device behavior are not verified.")
 
