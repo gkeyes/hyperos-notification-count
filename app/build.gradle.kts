@@ -73,6 +73,8 @@ dependencies {
     testImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
+    // AndroidX Test refers to these compiler annotations without packaging them.
+    androidTestImplementation("com.google.errorprone:error_prone_annotations:2.15.0")
 }
 
 tasks.withType<Test>().configureEach {

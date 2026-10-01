@@ -45,6 +45,11 @@ jobs:
         env:
           MODULE_KEYSTORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.MODULE_KEYSTORE_PASSWORD || '' }}
         run: ./gradlew :app:assembleRelease --console=plain
+      - name: Build release runtime test package
+        if: github.event_name != 'pull_request'
+        env:
+          MODULE_KEYSTORE_PASSWORD: ${{ secrets.MODULE_KEYSTORE_PASSWORD }}
+        run: ./gradlew :app:assembleReleaseAndroidTest --console=plain
       - name: Verify module metadata and scope
         shell: bash
         run: |
