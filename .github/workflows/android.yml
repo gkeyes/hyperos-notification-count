@@ -84,9 +84,10 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disk-size: 4096M
-          ram-size: 3072M
+          ram-size: 4096M
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # API 37's goldfish mapper aborts if the host advertises read-color-buffer DMA.
+          emulator-options: -no-window -gpu swiftshader -feature -GLDirectMem -noaudio -no-boot-anim -camera-back none
           script: bash tools/run_release_smoke.sh
       - name: Verify release runtime results and identical delivery APK
         if: github.event_name != 'pull_request'

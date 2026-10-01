@@ -187,6 +187,9 @@ public class ReleaseSmokeTest {
     }
 
     private void scrollToTop() {
+        // Recreate may return before the new window exposes its restored scroll state.
+        waitUntil("Settings scroll view is not ready", () ->
+                findNode(AccessibilityNodeInfo::isScrollable) != null);
         for (int attempt = 0; attempt < 15; attempt++)
             if (!scroll(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return;
         throw new AssertionError("Settings page did not scroll to the top");
