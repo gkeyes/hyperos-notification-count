@@ -14,6 +14,7 @@ android {
         versionCode = 5
         versionName = "0.1.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testProguardFiles("test-proguard-rules.pro")
     }
     buildFeatures {
         buildConfig = true
