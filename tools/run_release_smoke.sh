@@ -29,4 +29,7 @@ if [[ "$module_stable" -lt 5 ]]; then
     echo 'Android package service did not stabilize; see emulator diagnostics.'
     exit 1
 fi
+# Use the single-APK, file-based installer first, and retain its exit status/log.
+# This separates package-service failures from UTP and from test execution.
+adb install --no-streaming -r app/build/outputs/apk/release/app-release.apk 2>&1 | tee "$module_diag/install-release.txt"
 ./gradlew :app:connectedReleaseAndroidTest --console=plain

@@ -60,6 +60,13 @@ jobs:
           python3 tools/verify_module.py --apk "$apk"
           python3 tools/verify_release.py --apk "$apk" --mapping app/build/outputs/mapping/release/mapping.txt --build-tools "$ANDROID_HOME/build-tools/37.0.0" ${MODULE_KEYSTORE_PATH:+--signed}
           python3 tools/verify_optimization.py --apk "$apk" --mapping app/build/outputs/mapping/release/mapping.txt --configuration app/build/outputs/mapping/release/configuration.txt ${MODULE_KEYSTORE_PATH:+--signed}
+      - name: Save verified build before runtime checks
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verified-build-runtime-pending-${{ github.run_number }}
+          path: outputs/
+          if-no-files-found: error
       - name: Enable emulator acceleration
         if: github.event_name != 'pull_request'
         run: |
@@ -99,7 +106,7 @@ jobs:
             app/build/reports/tests/testReleaseUnitTest/
             app/build/test-results/testReleaseUnitTest/
             app/build/reports/androidTests/connected/
-            app/build/outputs/androidTest-results/connected/
+            app/build/outputs/androidTest-results/
           if-no-files-found: ignore
       - name: Save shrinking diagnostics
         if: always()
