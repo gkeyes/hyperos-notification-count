@@ -84,16 +84,17 @@ public class CountDrawableAndroidTest {
 
     @Test public void glyphColorFillsOnlyTheDigitOpening() {
         CountDrawable drawable = create();
+        // Large enough that every digit opening has fully transparent pixels.
+        drawable.setIconSize(64);
         for (int count = 1; count <= 10; count++) {
             drawable.setGlyphColor(null);
-            int[] knockout = draw(drawable, count, 0xff03d769);
+            int[] knockout = drawLarge(drawable, count, 0xff03d769);
             drawable.setGlyphColor(0xff000000);
-            int[] filled = draw(drawable, count, 0xff03d769);
+            int[] filled = drawLarge(drawable, count, 0xff03d769);
             int opened = 0;
             for (int i = 0; i < knockout.length; i++) {
-                if (Color.alpha(knockout[i]) == 0 && Color.alpha(filled[i]) > 0) opened++;
-                // Outside the disc nothing new may appear.
                 if (Color.alpha(knockout[i]) == 0 && Color.alpha(filled[i]) > 0) {
+                    opened++;
                     assertTrue("Fill escaped the disc for count " + count, insideDisc(i));
                 }
             }
@@ -101,6 +102,7 @@ public class CountDrawableAndroidTest {
         }
         drawable.setGlyphColor(null);
         assertNull(drawable.getGlyphColor());
+        assertTrue(drawable.getFailureReason(), drawable.isHealthy());
     }
 
     @Test public void missingResourcesFailBeforeNativeIconsCanBeSuppressed() {
@@ -147,11 +149,23 @@ public class CountDrawableAndroidTest {
         // so antialiased alpha>0 pixel totals need not match its first 16px rasterization.
     }
 
-    /** Disc of the 16-unit vector drawn into the centered 16px icon box of a 32px bitmap. */
+    /** Disc of the 16-unit vector drawn at 4px per unit across a 64px bitmap. */
     private boolean insideDisc(int index) {
-        float x = index % 32 + .5f - 8, y = index / 32 + .5f - 8;
+        float x = (index % 64 + .5f) / 4f, y = (index / 64 + .5f) / 4f;
         float dx = x - 7f, dy = y - 8.7f;
         return dx * dx + dy * dy <= 6f * 6f;
+    }
+
+    private int[] drawLarge(CountDrawable drawable, int count, int tint) {
+        Bitmap bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888);
+        drawable.setBounds(0, 0, 64, 64);
+        drawable.setCount(count);
+        drawable.setTint(tint);
+        drawable.draw(new Canvas(bitmap));
+        int[] pixels = new int[64 * 64];
+        bitmap.getPixels(pixels, 0, 64, 0, 0, 64, 64);
+        bitmap.recycle();
+        return pixels;
     }
 
     private CountDrawable create() {
