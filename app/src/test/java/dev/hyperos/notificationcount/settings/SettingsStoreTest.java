@@ -65,14 +65,15 @@ public class SettingsStoreTest {
         store.setDigitWeight(FilterPreferences.WEIGHT_MEDIUM);
         store.setExcluded(NotificationType.MEDIA, true);
         store.reset();
-        SettingsStore fresh = connected(remote.freshConnection());
+        SettingsTestDoubles.OptimisticPreferences reopened = remote.freshConnection();
+        SettingsStore fresh = connected(reopened);
         assertEquals(FilterPreferences.DIGIT_COLOR_WHITE, fresh.state().digitColor);
         assertEquals(70, fresh.state().badgeContrast);
         assertEquals(FilterPreferences.WEIGHT_MEDIUM, fresh.state().digitWeight);
         assertEquals(0, fresh.state().mask);
         // Unknown stored values fall back to defaults instead of breaking the badge.
         fresh.setBadgeContrast(12);
-        assertEquals(45, connected(remote.freshConnection()).state().badgeContrast);
+        assertEquals(45, connected(reopened.freshConnection()).state().badgeContrast);
     }
 
     @Test public void failedStyleSaveRestoresEveryConfirmedOption() {
