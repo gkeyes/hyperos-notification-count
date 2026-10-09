@@ -270,7 +270,10 @@ final class StatusBarRenderer {
             int systemTint = (int) HostAccess.call(getTint, null, tintAreas, current, tint);
             Integer candidate = highlight.activeSource() != null ? iconColor : null;
             if (tintApplied && lastSystemTint == systemTint && Objects.equals(lastIconColor, candidate)) return;
-            drawable.setTint(ReadableIconColor.forSystemTint(candidate, systemTint));
+            int color = ReadableIconColor.forSystemTint(candidate, systemTint);
+            drawable.setTint(color);
+            // Colored badges get solid black/white digits; monochrome ones keep the knockout.
+            drawable.setGlyphColor(candidate != null ? ReadableIconColor.glyphOn(color) : null);
             lastSystemTint = systemTint;
             lastIconColor = candidate;
             tintApplied = true;

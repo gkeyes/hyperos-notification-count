@@ -29,6 +29,16 @@ public final class ReadableIconColor {
         return result;
     }
 
+    /**
+     * Black or white for digits drawn on a colored badge, whichever reads better.
+     * The badge's alpha is kept so the digit fades together with the disc.
+     */
+    public static int glyphOn(int badge) {
+        int opaque = badge | 0xff000000;
+        int glyph = contrast(opaque, 0xffffffff) >= contrast(opaque, 0xff000000) ? 0xffffff : 0x000000;
+        return glyph | (badge & 0xff000000);
+    }
+
     public static double contrast(int first, int second) {
         double a = luminance(first);
         double b = luminance(second);

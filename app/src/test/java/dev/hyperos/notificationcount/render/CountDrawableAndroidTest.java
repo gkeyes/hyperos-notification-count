@@ -82,6 +82,27 @@ public class CountDrawableAndroidTest {
         }
     }
 
+    @Test public void glyphColorFillsOnlyTheDigitOpening() {
+        CountDrawable drawable = create();
+        for (int count = 1; count <= 10; count++) {
+            drawable.setGlyphColor(null);
+            int[] knockout = draw(drawable, count, 0xff03d769);
+            drawable.setGlyphColor(0xff000000);
+            int[] filled = draw(drawable, count, 0xff03d769);
+            int opened = 0;
+            for (int i = 0; i < knockout.length; i++) {
+                if (Color.alpha(knockout[i]) == 0 && Color.alpha(filled[i]) > 0) opened++;
+                // Outside the disc nothing new may appear.
+                if (Color.alpha(knockout[i]) == 0 && Color.alpha(filled[i]) > 0) {
+                    assertTrue("Fill escaped the disc for count " + count, insideDisc(i));
+                }
+            }
+            assertTrue("Digit opening not filled for count " + count, opened > 0);
+        }
+        drawable.setGlyphColor(null);
+        assertNull(drawable.getGlyphColor());
+    }
+
     @Test public void missingResourcesFailBeforeNativeIconsCanBeSuppressed() {
         CountDrawable drawable = new CountDrawable(null);
         assertFalse(drawable.isHealthy());
@@ -124,6 +145,13 @@ public class CountDrawableAndroidTest {
         assertTrue(restoredBounds.height() < visibleBounds(after).height());
         // Native VectorDrawable caches only grow: shrinking resamples the larger bitmap,
         // so antialiased alpha>0 pixel totals need not match its first 16px rasterization.
+    }
+
+    /** Disc of the 16-unit vector drawn into the centered 16px icon box of a 32px bitmap. */
+    private boolean insideDisc(int index) {
+        float x = index % 32 + .5f - 8, y = index / 32 + .5f - 8;
+        float dx = x - 7f, dy = y - 8.7f;
+        return dx * dx + dy * dy <= 6f * 6f;
     }
 
     private CountDrawable create() {
