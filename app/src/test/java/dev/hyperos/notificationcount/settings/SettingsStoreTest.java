@@ -25,10 +25,11 @@ public class SettingsStoreTest {
         store.reset();
         assertState(store, 0, SettingsStore.Status.READY);
         assertTrue(store.state().iconColorEnabled);
-        SettingsStore reopened = connected(remote.freshConnection());
+        SettingsTestDoubles.OptimisticPreferences reopenedRemote = remote.freshConnection();
+        SettingsStore reopened = connected(reopenedRemote);
         assertTrue(reopened.state().iconColorEnabled);
         reopened.setIconColorEnabled(false);
-        assertFalse(connected(remote.freshConnection()).state().iconColorEnabled);
+        assertFalse(connected(reopenedRemote.freshConnection()).state().iconColorEnabled);
     }
 
     @Test public void aFailedColorSaveRollsBackBothFieldsAndRequiresAcknowledgedRetry() {
