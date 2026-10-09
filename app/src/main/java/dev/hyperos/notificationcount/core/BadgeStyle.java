@@ -24,7 +24,7 @@ public final class BadgeStyle {
 
     /** Solid digit color for a colored badge; null keeps the transparent knockout. */
     public Integer glyphColor(Integer candidate, int badge) {
-        if (candidate == null) return null;
+        if (candidate == null || digitColor == FilterPreferences.DIGIT_COLOR_TRANSPARENT) return null;
         int alpha = badge & 0xff000000;
         if (digitColor == FilterPreferences.DIGIT_COLOR_WHITE) return 0x00ffffff | alpha;
         if (digitColor == FilterPreferences.DIGIT_COLOR_BLACK) return alpha;

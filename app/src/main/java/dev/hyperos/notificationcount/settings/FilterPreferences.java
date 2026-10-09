@@ -19,7 +19,10 @@ public final class FilterPreferences {
     public static final int DIGIT_COLOR_AUTO = 0;
     public static final int DIGIT_COLOR_WHITE = 1;
     public static final int DIGIT_COLOR_BLACK = 2;
-    public static final List<Integer> DIGIT_COLORS = List.of(DIGIT_COLOR_AUTO, DIGIT_COLOR_WHITE, DIGIT_COLOR_BLACK);
+    /** Keep the digit knocked out so the status bar shows through, as in monochrome mode. */
+    public static final int DIGIT_COLOR_TRANSPARENT = 3;
+    public static final List<Integer> DIGIT_COLORS = List.of(
+            DIGIT_COLOR_AUTO, DIGIT_COLOR_WHITE, DIGIT_COLOR_BLACK, DIGIT_COLOR_TRANSPARENT);
     /** Minimum contrast of a colored badge against the status bar, in tenths (4.5 = 45). */
     public static final String BADGE_CONTRAST = "badge_contrast_tenths";
     public static final int DEFAULT_BADGE_CONTRAST = 45;

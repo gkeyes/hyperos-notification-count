@@ -213,6 +213,7 @@ internal fun SettingsScreen(
                         stringResource(R.string.settings_digit_color_auto),
                         stringResource(R.string.settings_digit_color_white),
                         stringResource(R.string.settings_digit_color_black),
+                        stringResource(R.string.settings_digit_color_transparent),
                     ),
                     values = FilterPreferences.DIGIT_COLORS,
                     selected = state.digitColor,

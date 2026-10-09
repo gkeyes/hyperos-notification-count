@@ -18,6 +18,7 @@ public class BadgeStyleTest {
         int badge = 0x88f5d547;
         assertEquals(0x88ffffff, (int) new BadgeStyle(FilterPreferences.DIGIT_COLOR_WHITE, 45, 0).glyphColor(1, badge));
         assertEquals(0x88000000, (int) new BadgeStyle(FilterPreferences.DIGIT_COLOR_BLACK, 45, 0).glyphColor(1, badge));
+        assertNull(new BadgeStyle(FilterPreferences.DIGIT_COLOR_TRANSPARENT, 45, 0).glyphColor(1, badge));
         assertEquals(ReadableIconColor.glyphOn(badge),
                 (int) new BadgeStyle(FilterPreferences.DIGIT_COLOR_AUTO, 45, 0).glyphColor(1, badge));
     }
