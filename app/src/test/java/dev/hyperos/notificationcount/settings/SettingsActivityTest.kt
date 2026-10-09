@@ -86,10 +86,10 @@ class SettingsActivityTest {
         val duration = composeRule.onNodeWithTag("icon-color-duration")
         connectPersisted()
         temporary.assertIsOff().assertIsNotEnabled()
-        duration.assertIsNotEnabled()
+        duration.assertIsNotEnabled().assertHasNoClickAction()
         color.performScrollTo().performClick()
         temporary.performScrollTo().assertIsEnabled().performClick().assertIsOn()
-        duration.assertIsEnabled()
+        duration.assertIsEnabled().assertHasClickAction()
         for (seconds in listOf(1, 3, 5, 10, 15)) {
             duration.performScrollTo().performClick()
             composeRule.onNodeWithText(application.getString(R.string.settings_color_seconds, seconds))
@@ -104,7 +104,7 @@ class SettingsActivityTest {
         duration.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "15 秒"))
         color.performScrollTo().performClick()
         temporary.assertIsOn().assertIsNotEnabled()
-        duration.assertIsNotEnabled()
+        duration.assertIsNotEnabled().assertHasNoClickAction()
     }
 
     @Test

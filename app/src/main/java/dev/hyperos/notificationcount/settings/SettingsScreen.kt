@@ -188,15 +188,18 @@ internal fun SettingsScreen(
                 val durations = FilterPreferences.COLOR_DURATIONS
                 val durationLabels = durations.map { stringResource(R.string.settings_color_seconds, it) }
                 val durationLabel = stringResource(R.string.settings_color_seconds, state.colorDurationSeconds)
+                val durationEditable = temporaryEditable && state.temporaryColor
                 OverlayDropdownPreference(
                     title = stringResource(R.string.settings_color_duration_title),
                     summary = stringResource(R.string.settings_color_duration_description),
                     items = durationLabels,
                     selectedIndex = durations.indexOf(state.colorDurationSeconds),
-                    enabled = temporaryEditable && state.temporaryColor,
+                    enabled = durationEditable,
                     onSelectedIndexChange = { onColorDurationChange(durations[it]) },
                     modifier = Modifier.testTag("icon-color-duration").semantics {
                         stateDescription = durationLabel
+                        // Miuix removes the click handler while disabled; expose that state to accessibility.
+                        if (!durationEditable) disabled()
                     },
                 )
             }
