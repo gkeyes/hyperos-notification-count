@@ -25,20 +25,33 @@ public final class CountDrawable extends Drawable {
     // Stay inside the disc's antialiased edge so the fill never shows around it.
     private static final float GLYPH_FILL_RADIUS = 5.5f;
     private static final float VIEWPORT = 16f;
-    private static final int[] RESOURCE_IDS = {
-            R.drawable.notification_count_1,
-            R.drawable.notification_count_2,
-            R.drawable.notification_count_3,
-            R.drawable.notification_count_4,
-            R.drawable.notification_count_5,
-            R.drawable.notification_count_6,
-            R.drawable.notification_count_7,
-            R.drawable.notification_count_8,
-            R.drawable.notification_count_9,
-            R.drawable.notification_count_overflow
+    /** Vectors per weight (normal, medium, bold), each listing counts 1-9 then overflow. */
+    private static final int[][] RESOURCE_IDS = {
+            {
+                    R.drawable.notification_count_1, R.drawable.notification_count_2,
+                    R.drawable.notification_count_3, R.drawable.notification_count_4,
+                    R.drawable.notification_count_5, R.drawable.notification_count_6,
+                    R.drawable.notification_count_7, R.drawable.notification_count_8,
+                    R.drawable.notification_count_9, R.drawable.notification_count_overflow
+            },
+            {
+                    R.drawable.notification_count_1_medium, R.drawable.notification_count_2_medium,
+                    R.drawable.notification_count_3_medium, R.drawable.notification_count_4_medium,
+                    R.drawable.notification_count_5_medium, R.drawable.notification_count_6_medium,
+                    R.drawable.notification_count_7_medium, R.drawable.notification_count_8_medium,
+                    R.drawable.notification_count_9_medium, R.drawable.notification_count_overflow_medium
+            },
+            {
+                    R.drawable.notification_count_1_bold, R.drawable.notification_count_2_bold,
+                    R.drawable.notification_count_3_bold, R.drawable.notification_count_4_bold,
+                    R.drawable.notification_count_5_bold, R.drawable.notification_count_6_bold,
+                    R.drawable.notification_count_7_bold, R.drawable.notification_count_8_bold,
+                    R.drawable.notification_count_9_bold, R.drawable.notification_count_overflow_bold
+            }
     };
 
-    private final Drawable[] states = new Drawable[OVERFLOW_STATE + 1];
+    private final Drawable[][] states = new Drawable[RESOURCE_IDS.length][OVERFLOW_STATE + 1];
+    private int weight;
     private final Rect iconBounds = new Rect();
     private int iconSize;
     private int state;
@@ -68,17 +81,19 @@ public final class CountDrawable extends Drawable {
         }
 
         // Resolve every state before the host replaces any existing icon.
-        for (int index = 0; index < RESOURCE_IDS.length; index++) {
-            try {
-                Drawable drawable = moduleResources.getDrawable(RESOURCE_IDS[index], null);
-                if (!(drawable instanceof VectorDrawable)) {
-                    throw new IllegalStateException("Resource is not an Android VectorDrawable");
+        for (int set = 0; set < RESOURCE_IDS.length; set++) {
+            for (int index = 0; index < RESOURCE_IDS[set].length; index++) {
+                try {
+                    Drawable drawable = moduleResources.getDrawable(RESOURCE_IDS[set][index], null);
+                    if (!(drawable instanceof VectorDrawable)) {
+                        throw new IllegalStateException("Resource is not an Android VectorDrawable");
+                    }
+                    drawable = drawable.mutate();
+                    drawable.setTint(tint);
+                    states[set][index + 1] = drawable;
+                } catch (Throwable failure) {
+                    fail("load weight " + set + " state " + (index + 1), failure);
                 }
-                drawable = drawable.mutate();
-                drawable.setTint(tint);
-                states[index + 1] = drawable;
-            } catch (Throwable failure) {
-                fail("load state " + (index + 1), failure);
             }
         }
     }
@@ -91,6 +106,18 @@ public final class CountDrawable extends Drawable {
         }
         state = nextState;
         invalidateSafely();
+    }
+
+    /** Selects the normal (0), medium (1) or bold (2) digit vectors. */
+    public void setWeight(int weight) {
+        int next = Math.max(0, Math.min(weight, RESOURCE_IDS.length - 1));
+        if (this.weight == next) return;
+        this.weight = next;
+        invalidateSafely();
+    }
+
+    public int getWeight() {
+        return weight;
     }
 
     /** Recomputes the slot after the host display density changes. */
@@ -112,9 +139,9 @@ public final class CountDrawable extends Drawable {
             return;
         }
         try {
-            for (Drawable drawable : states) {
-                if (drawable != null) {
-                    drawable.setTint(color);
+            for (Drawable[] set : states) {
+                for (Drawable drawable : set) {
+                    if (drawable != null) drawable.setTint(color);
                 }
             }
             invalidateSafely();
@@ -148,9 +175,9 @@ public final class CountDrawable extends Drawable {
             return;
         }
         try {
-            for (Drawable drawable : states) {
-                if (drawable != null) {
-                    drawable.setAlpha(nextAlpha);
+            for (Drawable[] set : states) {
+                for (Drawable drawable : set) {
+                    if (drawable != null) drawable.setAlpha(nextAlpha);
                 }
             }
             invalidateSafely();
@@ -174,9 +201,9 @@ public final class CountDrawable extends Drawable {
             return;
         }
         try {
-            for (Drawable drawable : states) {
-                if (drawable != null) {
-                    drawable.setColorFilter(colorFilter);
+            for (Drawable[] set : states) {
+                for (Drawable drawable : set) {
+                    if (drawable != null) drawable.setColorFilter(colorFilter);
                 }
             }
             invalidateSafely();
@@ -204,7 +231,7 @@ public final class CountDrawable extends Drawable {
             return;
         }
         try {
-            Drawable drawable = states[state];
+            Drawable drawable = states[weight][state];
             if (drawable == null) {
                 throw new IllegalStateException("Selected vector is missing");
             }

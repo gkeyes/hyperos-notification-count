@@ -6,14 +6,23 @@ public final class ReadableIconColor {
     private ReadableIconColor() { }
 
     public static int forSystemTint(Integer candidate, int systemTint) {
+        return forSystemTint(candidate, systemTint, MIN_CONTRAST);
+    }
+
+    /** As above with a caller-chosen minimum contrast against the inferred background. */
+    public static int forSystemTint(Integer candidate, int systemTint, double minContrast) {
         if (candidate == null) return systemTint;
         int background = luminance(systemTint) < .5 ? 0xffffffff : 0xff000000;
-        return (onBackground(candidate, background) & 0x00ffffff) | (systemTint & 0xff000000);
+        return (onBackground(candidate, background, minContrast) & 0x00ffffff) | (systemTint & 0xff000000);
     }
 
     public static int onBackground(int source, int background) {
+        return onBackground(source, background, MIN_CONTRAST);
+    }
+
+    public static int onBackground(int source, int background, double minContrast) {
         int opaque = source | 0xff000000;
-        if (contrast(opaque, background) >= MIN_CONTRAST) return opaque;
+        if (contrast(opaque, background) >= minContrast) return opaque;
         int target = luminance(background) > .5 ? 0 : 255;
         double low = 0;
         double high = 1;
@@ -21,7 +30,7 @@ public final class ReadableIconColor {
         for (int step = 0; step < 12; step++) {
             double amount = (low + high) / 2;
             int adjusted = mix(opaque, target, amount);
-            if (contrast(adjusted, background) >= MIN_CONTRAST) {
+            if (contrast(adjusted, background) >= minContrast) {
                 result = adjusted;
                 high = amount;
             } else low = amount;

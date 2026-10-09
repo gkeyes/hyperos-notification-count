@@ -23,6 +23,7 @@ import dev.hyperos.notificationcount.core.NotificationCounter;
 import dev.hyperos.notificationcount.core.NotificationSnapshot;
 import dev.hyperos.notificationcount.core.NotificationArrivals;
 import dev.hyperos.notificationcount.core.AppIconSource;
+import dev.hyperos.notificationcount.core.BadgeStyle;
 import dev.hyperos.notificationcount.settings.FilterPreferences;
 import io.github.libxposed.api.XposedInterface;
 
@@ -43,7 +44,10 @@ public final class SystemUiHooks {
         if (key == null || FilterPreferences.EXCLUDED_MASK.equals(key)
                 || FilterPreferences.ICON_COLOR_ENABLED.equals(key)
                 || FilterPreferences.ICON_COLOR_TEMPORARY.equals(key)
-                || FilterPreferences.ICON_COLOR_DURATION.equals(key)) requestRefresh();
+                || FilterPreferences.ICON_COLOR_DURATION.equals(key)
+                || FilterPreferences.DIGIT_COLOR.equals(key)
+                || FilterPreferences.BADGE_CONTRAST.equals(key)
+                || FilterPreferences.DIGIT_WEIGHT.equals(key)) requestRefresh();
     };
     private final List<XposedInterface.HookHandle> handles = new ArrayList<>();
     private final Class<?> pipelineType;
@@ -286,7 +290,10 @@ public final class SystemUiHooks {
         } else arrivals.clear();
         renderer.setCount(counted.size(), true, source, arrival, colorEnabled,
                 FilterPreferences.readTemporaryColor(filterPreferences),
-                FilterPreferences.readColorDuration(filterPreferences));
+                FilterPreferences.readColorDuration(filterPreferences),
+                new BadgeStyle(FilterPreferences.readDigitColor(filterPreferences),
+                        FilterPreferences.readBadgeContrast(filterPreferences),
+                        FilterPreferences.readDigitWeight(filterPreferences)));
     }
 
     private void fail(Throwable error) {

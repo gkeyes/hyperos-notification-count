@@ -4,15 +4,30 @@
     <string name="settings_title">通知数量</string>
     <string name="settings_version">版本 %1$s · 系统界面</string>
     <string name="settings_back">返回</string>
-    <string name="settings_intro">下方过滤开关开启 = 从数量中排除这类通知。过滤默认全部关闭，只改变计数，不清除通知。取色开关单独控制数字的颜色。</string>
+    <string name="settings_intro">下方过滤开关开启 = 从数量中排除这类通知。过滤默认全部关闭，只改变计数，不清除通知。显示样式中的选项单独控制徽标外观。</string>
     <string name="settings_section_display">显示样式</string>
     <string name="settings_icon_color_title">跟随通知 App 图标颜色</string>
-    <string name="settings_icon_color_description">默认关闭。开启后，圆圈和数字使用最新参与计数通知的 App 图标候选色，并适应深浅背景。取不到彩色时沿用系统黑白色。数字仍表示通知总数。</string>
+    <string name="settings_icon_color_description">默认关闭。开启后，圆点使用最新参与计数通知的 App 图标候选色，并适应深浅背景。取不到彩色时沿用系统黑白色。数字仍表示通知总数。</string>
     <string name="settings_temporary_color_title">临时变色</string>
     <string name="settings_temporary_color_description">默认关闭。开启后，变色仅持续所选时长，到期恢复系统当前的黑白色。新通知重新计时，同一条通知的进度更新不延长时长。</string>
     <string name="settings_color_duration_title">变色持续时间</string>
     <string name="settings_color_duration_description">默认 5 秒，修改后从当前通知重新计时。</string>
     <string name="settings_color_seconds">%1$d 秒</string>
+    <string name="settings_digit_color_title">数字颜色</string>
+    <string name="settings_digit_color_description">仅在跟随图标颜色时生效。自动：按圆点颜色选黑或白，取对比度更高者。系统黑白时数字始终镂空。</string>
+    <string name="settings_digit_color_auto">自动</string>
+    <string name="settings_digit_color_white">白色</string>
+    <string name="settings_digit_color_black">黑色</string>
+    <string name="settings_badge_contrast_title">圆点对比度</string>
+    <string name="settings_badge_contrast_description">仅在跟随图标颜色时生效。图标色与状态栏背景对比不足时，会调亮或调暗到所选程度。柔和更接近原色，高更醒目。</string>
+    <string name="settings_badge_contrast_soft">柔和（3:1）</string>
+    <string name="settings_badge_contrast_standard">标准（4.5:1）</string>
+    <string name="settings_badge_contrast_high">高（7:1）</string>
+    <string name="settings_digit_weight_title">数字粗细</string>
+    <string name="settings_digit_weight_description">圆点内数字的笔画粗细，黑白与彩色模式都生效。</string>
+    <string name="settings_digit_weight_normal">普通</string>
+    <string name="settings_digit_weight_medium">中等</string>
+    <string name="settings_digit_weight_bold">最粗</string>
     <string name="settings_overlap">一条通知可能同时属于多类；命中任一已开启的开关就会被排除。建议每次只开一项，观察状态栏数字的变化，再决定组合。</string>
     <string name="settings_selected">已开启 %1$d 项过滤</string>
     <string name="settings_ready">设置已连接。变更会实时发送到同一空间的系统界面；首次更新模块仍需按平时的方式使新版生效。</string>

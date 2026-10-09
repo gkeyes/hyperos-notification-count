@@ -54,6 +54,44 @@ public class SettingsStoreTest {
         assertEquals(3, connected(remote.freshConnection()).state().colorDurationSeconds);
     }
 
+    @Test public void badgeStyleDefaultsPersistAndSurviveFilterReset() {
+        SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
+        SettingsStore store = connected(remote);
+        assertEquals(FilterPreferences.DIGIT_COLOR_AUTO, store.state().digitColor);
+        assertEquals(45, store.state().badgeContrast);
+        assertEquals(FilterPreferences.WEIGHT_NORMAL, store.state().digitWeight);
+        store.setDigitColor(FilterPreferences.DIGIT_COLOR_WHITE);
+        store.setBadgeContrast(70);
+        store.setDigitWeight(FilterPreferences.WEIGHT_MEDIUM);
+        store.setExcluded(NotificationType.MEDIA, true);
+        store.reset();
+        SettingsStore fresh = connected(remote.freshConnection());
+        assertEquals(FilterPreferences.DIGIT_COLOR_WHITE, fresh.state().digitColor);
+        assertEquals(70, fresh.state().badgeContrast);
+        assertEquals(FilterPreferences.WEIGHT_MEDIUM, fresh.state().digitWeight);
+        assertEquals(0, fresh.state().mask);
+        // Unknown stored values fall back to defaults instead of breaking the badge.
+        fresh.setBadgeContrast(12);
+        assertEquals(45, connected(remote.freshConnection()).state().badgeContrast);
+    }
+
+    @Test public void failedStyleSaveRestoresEveryConfirmedOption() {
+        SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
+        SettingsStore store = connected(remote);
+        store.setDigitWeight(FilterPreferences.WEIGHT_BOLD);
+        store.setDigitColor(FilterPreferences.DIGIT_COLOR_BLACK);
+        remote.queueCommitResults(false, false);
+        store.setBadgeContrast(30);
+        assertState(store, 0, SettingsStore.Status.SAVE_FAILED);
+        assertEquals(45, store.state().badgeContrast);
+        assertEquals(FilterPreferences.WEIGHT_BOLD, store.state().digitWeight);
+        assertEquals(FilterPreferences.DIGIT_COLOR_BLACK, store.state().digitColor);
+        assertEquals(45, FilterPreferences.readBadgeContrast(remote.preferences));
+        store.retry();
+        assertState(store, 0, SettingsStore.Status.READY);
+        assertEquals(FilterPreferences.WEIGHT_BOLD, connected(remote.freshConnection()).state().digitWeight);
+    }
+
     @Test public void iconColorDefaultsOffAndPersistsIndependentlyOfFilterReset() {
         SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
         SettingsStore store = connected(remote);

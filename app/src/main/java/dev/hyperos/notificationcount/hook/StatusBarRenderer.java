@@ -25,9 +25,9 @@ import java.util.concurrent.Executors;
 
 import dev.hyperos.notificationcount.NotificationCountModule;
 import dev.hyperos.notificationcount.core.AppIconSource;
+import dev.hyperos.notificationcount.core.BadgeStyle;
 import dev.hyperos.notificationcount.core.ColorHighlightController;
 import dev.hyperos.notificationcount.core.IconColorCoordinator;
-import dev.hyperos.notificationcount.core.ReadableIconColor;
 import dev.hyperos.notificationcount.render.AppIconColorLoader;
 import dev.hyperos.notificationcount.render.CountDrawable;
 
@@ -53,6 +53,7 @@ final class StatusBarRenderer {
     private int count;
     private boolean ready;
     private Integer iconColor;
+    private BadgeStyle style = BadgeStyle.DEFAULT;
     private IconColorCoordinator colors;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ColorHighlightController highlight = new ColorHighlightController(
@@ -126,8 +127,14 @@ final class StatusBarRenderer {
     }
 
     void setCount(int count, boolean ready, AppIconSource source, long arrival,
-            boolean colorEnabled, boolean temporary, int seconds) throws Throwable {
+            boolean colorEnabled, boolean temporary, int seconds, BadgeStyle style) throws Throwable {
         highlight.update(ready ? source : null, arrival, ready && colorEnabled, temporary, seconds);
+        if (!this.style.equals(style)) {
+            this.style = style;
+            for (State state : new ArrayList<>(states.values())) {
+                try { state.applyStyle(); } catch (Throwable error) { state.disable(error); }
+            }
+        }
         if (this.count == count && this.ready == ready) return;
         this.count = count;
         this.ready = ready;
@@ -210,6 +217,7 @@ final class StatusBarRenderer {
         boolean tintApplied;
         int lastSystemTint;
         Integer lastIconColor;
+        BadgeStyle lastStyle;
 
         State(ViewGroup view, Object owner, Object dispatcher, Resources resources) {
             this.view = new WeakReference<>(view);
@@ -217,6 +225,7 @@ final class StatusBarRenderer {
             this.dispatcher = dispatcher;
             originalDescription = view.getContentDescription();
             drawable = new CountDrawable(resources);
+            drawable.setWeight(style.weight);
             receiver = Proxy.newProxyInstance(receiverType.getClassLoader(), new Class<?>[]{receiverType},
                     (proxy, method, args) -> {
                         if (method.getDeclaringClass() == Object.class) {
@@ -269,14 +278,21 @@ final class StatusBarRenderer {
             if (current == null) return;
             int systemTint = (int) HostAccess.call(getTint, null, tintAreas, current, tint);
             Integer candidate = highlight.activeSource() != null ? iconColor : null;
-            if (tintApplied && lastSystemTint == systemTint && Objects.equals(lastIconColor, candidate)) return;
-            int color = ReadableIconColor.forSystemTint(candidate, systemTint);
+            if (tintApplied && lastSystemTint == systemTint && Objects.equals(lastIconColor, candidate)
+                    && style.equals(lastStyle)) return;
+            int color = style.badgeColor(candidate, systemTint);
             drawable.setTint(color);
             // Colored badges get solid black/white digits; monochrome ones keep the knockout.
-            drawable.setGlyphColor(candidate != null ? ReadableIconColor.glyphOn(color) : null);
+            drawable.setGlyphColor(style.glyphColor(candidate, color));
             lastSystemTint = systemTint;
             lastIconColor = candidate;
+            lastStyle = style;
             tintApplied = true;
+        }
+
+        void applyStyle() throws Throwable {
+            drawable.setWeight(style.weight);
+            updateTint();
         }
 
         void update() throws Throwable {
