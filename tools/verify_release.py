@@ -272,7 +272,8 @@ def verify_count_vector(xmltree, source):
                 f"Compiled count vector must have a 16x16 viewport: {key}")
     expected = ET.parse(source).getroot()
     paths = vector["children"]
-    require(len(paths) == len(expected) == 2, "Count vector must retain exactly two paths")
+    # Solid badges merge disc and glyph into one evenOdd path so the glyph is knocked out.
+    require(len(paths) == len(expected) == 1, "Count vector must be one solid knockout path")
     android = "{http://schemas.android.com/apk/res/android}"
     for actual, original in zip(paths, expected):
         require(actual["name"] == original.tag == "path" and not actual["children"],

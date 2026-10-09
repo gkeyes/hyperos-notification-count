@@ -1,4 +1,4 @@
-# HyperOS 通知数量 0.1.6
+# HyperOS 通知数量 0.1.7
 
 基于 libxposed API **102.0.0**，将 HyperOS 4 顶部通知 App 图标替换为一个通知数量图标。设置页从 LSPosed / Vector 的模块设置入口打开，**不显示桌面图标**。启用模块或安装新版后，在 SystemUI 下次加载模块时生效；新版加载后的过滤开关通过框架实时更新。
 
@@ -9,8 +9,8 @@
 | 有效通知条数 | 显示 |
 | --- | --- |
 | 0 | 隐藏 |
-| 1–9 | 用户提供的空心圈数字图标 |
-| 超过 9 | 用户提供的空心圈三点图标 `···` |
+| 1–9 | 实心圆徽标，数字镂空 |
+| 超过 9 | 实心圆徽标，三点 `···` 镂空 |
 
 按当前空间及原生当前 profiles 的通知记录统计，默认包含折叠、静默和常驻通知。已取消、本地划掉及被父汇总划掉的通知排除；同 key 更新不额外加一。有效子通知所在组的汇总不重复计数，孤立汇总保留为一条。类型过滤前先确认组内孩子，过滤孩子不会使汇总重新计数。这里表示系统通知条目总数，各 App 的真实未读消息数量不在此口径内。
 
@@ -24,7 +24,7 @@
 
 设置使用 `io.github.libxposed:service:102.0.0` 的框架远程偏好，SystemUI 读取 API 102 的只读偏好并监听变更。不额外请求权限、不使用可被其他应用读取的本地配置文件、不把模块自身添加到作用域。设置连接和保存放在串行后台线程；失败时页面恢复上次确认的开关并禁用编辑，重试确认成功后才重新开放。不同 Android 空间的配置由框架隔离，请在运行对应 SystemUI 的同一空间设置。
 
-10 个实际显示向量来自用户的 `notification-count-icons.zip`，SVG 路径直接映射到 Android VectorDrawable，保留 16 × 16 画布与奇偶填充。0 状态不需要图片。原始资产及逐路径校验见 [design/source](design/source/mapping-verification.md)。
+10 个实际显示向量源自用户的 `notification-count-icons.zip`。0.1.7 起改为实心圆徽标：圆直径 12.5（原空心圈外径 13.8），数字与三点按同比例缩放后与圆合并为一条奇偶填充路径，镂空处透出状态栏背景；保留 16 × 16 画布、单色可 tint。0 状态不需要图片。原始资产及逐路径校验见 [design/source](design/source/mapping-verification.md)。
 
 ## 实现位置
 
@@ -56,7 +56,7 @@ GitHub Actions 使用 JDK 21、Android SDK 37.0、Gradle 9.4.1、Android Gradle 
 
 模块 Hook API 依赖为 `compileOnly`，不把框架 API 类打进 APK。设置通信库及其官方 `XposedProvider` 随 APK 打包；编译后的 manifest 检查只允许这个 provider 和模块设置 Activity，并验证没有 LAUNCHER 或额外权限。定向移除设置页不使用的 AndroidX 启动 provider、profile receiver 和旧版动态接收器权限；仅允许两条 `required=false` 的 AndroidX Window 扩展库声明。JUnit / Robolectric / Compose UI test 只用于测试，不属于模块 APK。
 
-包名 `dev.hyperos.notificationcount`。首个本地测试包为 `0.1.0` / versionCode `1`；固定云端签名始于 `0.1.1` / versionCode `2`；原设置页版本为 `0.1.2` / versionCode `3`；Miuix 设置页始于 `0.1.3` / versionCode `4`，压缩版为 `0.1.4` / versionCode `5`，可选取色版为 `0.1.5` / versionCode `6`，当前临时变色版为 `0.1.6` / versionCode `7`。保留既有交付文件及校验值。
+包名 `dev.hyperos.notificationcount`。首个本地测试包为 `0.1.0` / versionCode `1`；固定云端签名始于 `0.1.1` / versionCode `2`；原设置页版本为 `0.1.2` / versionCode `3`；Miuix 设置页始于 `0.1.3` / versionCode `4`，压缩版为 `0.1.4` / versionCode `5`，可选取色版为 `0.1.5` / versionCode `6`，临时变色版为 `0.1.6` / versionCode `7`，当前实心徽标版为 `0.1.7` / versionCode `8`。保留既有交付文件及校验值。
 
 后续检查与编译在 GitHub Actions 执行，本地不再启动构建。云端使用本模块专属固定签名，私钥通过仓库加密 Secrets 传入，不提交到 Git。首次从本地 `0.1.0` 测试包转到云端包时，两者签名不同，需要手动卸载旧测试包后安装；后续云端包可连续更新。
 

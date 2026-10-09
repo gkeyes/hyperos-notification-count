@@ -1,5 +1,4 @@
 <?xml version='1.0' encoding='utf-8'?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="16dp" android:height="16dp" android:viewportWidth="16" android:viewportHeight="16">
-    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M14.9 8 A6.9 6.9 0 1 0 1.1 8 A6.9 6.9 0 1 0 14.9 8 Z M13.85 8 A5.85 5.85 0 1 0 2.15 8 A5.85 5.85 0 1 0 13.85 8 Z" />
-    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M5.2218 3.94 L10.7782 3.94 L10.7782 5.042 Q10.1402 5.7612 9.6182 6.5326 Q9.0962 7.304 8.7076 8.1682 Q8.319 9.0324 8.0754 9.9952 Q7.8318 10.958 7.7506 12.06 L6.3006 12.06 Q6.3702 11.0972 6.6312 10.1576 Q6.8922 9.218 7.304 8.3364 Q7.7158 7.4548 8.261 6.6428 Q8.8062 5.8308 9.4326 5.1232 L5.2218 5.1232 L5.2218 3.94 Z" />
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M14.25 8 A6.25 6.25 0 1 0 1.75 8 A6.25 6.25 0 1 0 14.25 8 Z M 5.4835 4.3225 L 10.5165 4.3225 L 10.5165 5.3207 Q 9.9386 5.9721 9.4658 6.6708 Q 8.9929 7.3696 8.6409 8.1524 Q 8.2889 8.9351 8.0683 9.8072 Q 7.8476 10.6793 7.7741 11.6775 L 6.4607 11.6775 Q 6.5237 10.8054 6.7601 9.9543 Q 6.9966 9.1033 7.3696 8.3047 Q 7.7426 7.5062 8.2364 6.7707 Q 8.7303 6.0351 9.2976 5.3942 L 5.4835 5.3942 L 5.4835 4.3225 Z" />
 </vector>
