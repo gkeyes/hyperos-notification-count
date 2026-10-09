@@ -16,10 +16,16 @@ public final class SettingsStore {
 
     public static final class State {
         public final int mask;
+        public final boolean iconColorEnabled;
         public final Status status;
 
         State(int mask, Status status) {
+            this(mask, false, status);
+        }
+
+        State(int mask, boolean iconColorEnabled, Status status) {
             this.mask = mask;
+            this.iconColorEnabled = iconColorEnabled;
             this.status = status;
         }
     }
@@ -80,6 +86,7 @@ public final class SettingsStore {
         long token = ++generation;
         Supplier<SharedPreferences> currentSource = source;
         int confirmedMask = state.mask;
+        boolean confirmedColor = state.iconColorEnabled;
         boolean restore = needsRestore;
         preferences = null;
         publish(confirmedMask, Status.CONNECTING);
@@ -88,19 +95,20 @@ public final class SettingsStore {
                 SharedPreferences loaded = currentSource.get();
                 // libxposed's app-side Editor updates its cache before the IPC completes.
                 // After a failed save, re-confirm the last acknowledged mask before enabling UI.
-                if (restore && !loaded.edit().putInt(FilterPreferences.EXCLUDED_MASK, confirmedMask).commit()) {
+                if (restore && !write(loaded, confirmedMask, confirmedColor)) {
                     throw new IllegalStateException("Remote preferences unavailable");
                 }
                 int mask = FilterPreferences.read(loaded);
+                boolean color = FilterPreferences.readIconColor(loaded);
                 main.execute(() -> {
                     if (token != generation) return;
                     preferences = loaded;
                     needsRestore = false;
-                    publish(mask, Status.READY);
+                    publish(mask, color, Status.READY);
                 });
             } catch (RuntimeException error) {
                 main.execute(() -> {
-                    if (token == generation) publish(confirmedMask, Status.UNAVAILABLE);
+                    if (token == generation) publish(confirmedMask, confirmedColor, Status.UNAVAILABLE);
                 });
             }
         });
@@ -112,42 +120,58 @@ public final class SettingsStore {
 
     public void reset() { setMask(0); }
 
+    public void setIconColorEnabled(boolean enabled) { setValues(state.mask, enabled); }
+
     private void setMask(int mask) {
+        setValues(mask, state.iconColorEnabled);
+    }
+
+    private void setValues(int mask, boolean color) {
         if (state.status != Status.READY || preferences == null) return;
         int nextMask = mask & FilterPreferences.KNOWN_MASK;
         int previousMask = state.mask;
-        if (previousMask == nextMask) return;
+        boolean previousColor = state.iconColorEnabled;
+        if (previousMask == nextMask && previousColor == color) return;
         long token = generation;
         SharedPreferences target = preferences;
-        publish(nextMask, Status.SAVING);
+        publish(nextMask, color, Status.SAVING);
         worker.execute(() -> {
             boolean saved;
             try {
-                saved = target.edit().putInt(FilterPreferences.EXCLUDED_MASK, nextMask).commit();
+                saved = write(target, nextMask, color);
             } catch (RuntimeException error) {
                 saved = false;
             }
             if (!saved) {
                 // Restore the optimistic library cache as well as attempting a remote rollback.
-                try { target.edit().putInt(FilterPreferences.EXCLUDED_MASK, previousMask).commit(); }
+                try { write(target, previousMask, previousColor); }
                 catch (RuntimeException ignored) { }
             }
             boolean acknowledged = saved;
             main.execute(() -> {
                 if (token != generation) return;
                 if (acknowledged) {
-                    publish(nextMask, Status.READY);
+                    publish(nextMask, color, Status.READY);
                 } else {
                     preferences = null;
                     needsRestore = true;
-                    publish(previousMask, Status.SAVE_FAILED);
+                    publish(previousMask, previousColor, Status.SAVE_FAILED);
                 }
             });
         });
     }
 
     private void publish(int mask, Status status) {
-        state = new State(mask, status);
+        publish(mask, state.iconColorEnabled, status);
+    }
+
+    private static boolean write(SharedPreferences target, int mask, boolean color) {
+        return target.edit().putInt(FilterPreferences.EXCLUDED_MASK, mask)
+                .putBoolean(FilterPreferences.ICON_COLOR_ENABLED, color).commit();
+    }
+
+    private void publish(int mask, boolean color, Status status) {
+        state = new State(mask, color, status);
         for (Consumer<State> observer : new LinkedHashSet<>(observers)) observer.accept(state);
     }
 }

@@ -1,9 +1,11 @@
 package dev.hyperos.notificationcount.core;
 
 import java.util.Collection;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 /** Counts effective notification entries without counting group summaries twice. */
@@ -17,6 +19,12 @@ public final class NotificationCounter {
 
     /** Excludes an entry if any of its type bits matches an enabled filter. */
     public static int count(Collection<NotificationSnapshot> snapshots, int excludedMask) {
+        return countedNotifications(snapshots, excludedMask).size();
+    }
+
+    /** The count and its color source must use exactly the same effective entries. */
+    public static List<NotificationSnapshot> countedNotifications(
+            Collection<NotificationSnapshot> snapshots, int excludedMask) {
         Map<String, NotificationSnapshot> latestByKey = new LinkedHashMap<>();
         for (NotificationSnapshot snapshot : snapshots) {
             latestByKey.put(snapshot.key, snapshot);
@@ -31,7 +39,7 @@ public final class NotificationCounter {
             }
         }
 
-        int count = 0;
+        List<NotificationSnapshot> counted = new ArrayList<>();
         for (NotificationSnapshot snapshot : latestByKey.values()) {
             if (!isEligible(snapshot)) {
                 continue;
@@ -44,9 +52,9 @@ public final class NotificationCounter {
                             new GroupIdentity(snapshot.userId, snapshot.groupKey))) {
                 continue;
             }
-            count++;
+            counted.add(snapshot);
         }
-        return count;
+        return counted;
     }
 
     private static boolean isEligible(NotificationSnapshot snapshot) {

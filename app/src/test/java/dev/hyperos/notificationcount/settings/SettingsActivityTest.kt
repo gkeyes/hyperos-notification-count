@@ -79,6 +79,29 @@ class SettingsActivityTest {
     }
 
     @Test
+    fun colorSwitchPersistsReopensAndFilterResetLeavesItOn() {
+        val color = composeRule.onNodeWithTag("icon-color-switch")
+        color.assertIsOff().assertIsNotEnabled().assertHasNoClickAction()
+        connectPersisted()
+        color.performScrollTo().assertIsEnabled().performClick().assertIsOn()
+        assertTrue(composeRule.runOnIdle { persisted.getBoolean(FilterPreferences.ICON_COLOR_ENABLED, false) })
+        filter(NotificationType.MEDIA).performScrollTo().performClick()
+        composeRule.onNodeWithTag("settings-reset").performScrollTo().performClick()
+        color.performScrollTo().assertIsOn()
+        composeRule.runOnIdle { application.replaceSettingsStore().connect(Any()) { persisted } }
+        composeRule.activityRule.scenario.recreate()
+        color.performScrollTo().assertIsOn().performClick().assertIsOff()
+        assertEquals(false, composeRule.runOnIdle { persisted.getBoolean(FilterPreferences.ICON_COLOR_ENABLED, true) })
+        // Disconnect the actual bound identity to verify this switch follows connection state.
+        composeRule.runOnIdle {
+            val service = Any()
+            application.getSettingsStore().connect(service) { persisted }
+            application.getSettingsStore().disconnect(service)
+        }
+        color.assertIsNotEnabled().assertHasNoClickAction()
+    }
+
+    @Test
     fun allFifteenFiltersHaveTheirOwnLabelsTagsAndOffDefaults() {
         assertFilterCount()
         for (type in NotificationType.values()) {

@@ -21,6 +21,8 @@ import java.util.List;
 import dev.hyperos.notificationcount.NotificationCountModule;
 import dev.hyperos.notificationcount.core.NotificationCounter;
 import dev.hyperos.notificationcount.core.NotificationSnapshot;
+import dev.hyperos.notificationcount.core.NotificationArrivals;
+import dev.hyperos.notificationcount.core.AppIconSource;
 import dev.hyperos.notificationcount.settings.FilterPreferences;
 import io.github.libxposed.api.XposedInterface;
 
@@ -34,10 +36,12 @@ public final class SystemUiHooks {
     private final HostAccess access;
     private final StatusBarRenderer renderer;
     private final NotificationClassifier classifier;
+    private final NotificationArrivals arrivals = new NotificationArrivals();
     private SharedPreferences filterPreferences;
     // Framework listeners are weakly held. Keep this callback alive for the injected process.
     private final SharedPreferences.OnSharedPreferenceChangeListener filterListener = (preferences, key) -> {
-        if (key == null || FilterPreferences.EXCLUDED_MASK.equals(key)) requestRefresh();
+        if (key == null || FilterPreferences.EXCLUDED_MASK.equals(key)
+                || FilterPreferences.ICON_COLOR_ENABLED.equals(key)) requestRefresh();
     };
     private final List<XposedInterface.HookHandle> handles = new ArrayList<>();
     private final Class<?> pipelineType;
@@ -206,7 +210,10 @@ public final class SystemUiHooks {
         users = newUsers;
         collection = newCollection;
         listeners = newListeners;
-        if (newSource) sourceRegistration = new ListenerRegistration();
+        if (newSource) {
+            sourceRegistration = new ListenerRegistration();
+            arrivals.clear();
+        }
         ensureSourceListeners();
         refreshNow();
     }
@@ -248,6 +255,7 @@ public final class SystemUiHooks {
     @SuppressWarnings("deprecation") // Public SDK accessor; UserHandle.getIdentifier is not in SDK 37 stubs.
     private void refreshNow() throws Throwable {
         int excludedMask = FilterPreferences.read(filterPreferences);
+        boolean colorEnabled = FilterPreferences.readIconColor(filterPreferences);
         Collection<?> current = (Collection<?>) HostAccess.call(getAllNotifs, pipeline);
         List<NotificationSnapshot> snapshots = new ArrayList<>(current.size());
         // getAllNotifs is a live view, so never retain it or its entries after this main-thread read.
@@ -259,9 +267,20 @@ public final class SystemUiHooks {
             snapshots.add(new NotificationSnapshot(sbn.getKey(), userId, sbn.getGroupKey(),
                     (sbn.getNotification().flags & Notification.FLAG_GROUP_SUMMARY) != 0, profile,
                     entryDismiss.get(entry) != notDismissed, entryCancellation.getInt(entry) != -1,
-                    classifier.classify(entry, sbn, excludedMask)));
+                    classifier.classify(entry, sbn, excludedMask),
+                    colorEnabled ? sbn.getPackageName() : null,
+                    colorEnabled ? sbn.getPostTime() : 0));
         }
-        renderer.setCount(NotificationCounter.count(snapshots, excludedMask), true);
+        List<NotificationSnapshot> counted = NotificationCounter.countedNotifications(snapshots, excludedMask);
+        AppIconSource source = null;
+        if (colorEnabled) {
+            arrivals.observe(snapshots);
+            NotificationSnapshot newest = arrivals.newest(counted);
+            if (newest != null && newest.packageName != null) {
+                source = new AppIconSource(newest.packageName, newest.userId);
+            }
+        } else arrivals.clear();
+        renderer.setCount(counted.size(), true, source);
     }
 
     private void fail(Throwable error) {

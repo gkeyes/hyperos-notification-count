@@ -390,6 +390,8 @@ def main():
         "scope=com.android.systemui\napi=102\ndebuggable=false\n"
         "settings=module-manager-only\nlauncher=false\nfilters=15\n"
         "settings_ui=miuix\nmiuix_version=0.9.4\n"
+        "icon_color=optional-default-off\nicon_color_source=declared-app-icon-resource\n"
+        "icon_color_sample=64x64\nicon_color_cache=64-users-and-packages\n"
     )
     (outputs / "BUILD_RECEIPT.txt").write_text(receipt)
     print(f"Fixed signer verified; prepared {name}, SHA-256 {info['sha256']}")

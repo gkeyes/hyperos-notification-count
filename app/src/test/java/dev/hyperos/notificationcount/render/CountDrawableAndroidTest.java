@@ -67,6 +67,21 @@ public class CountDrawableAndroidTest {
         assertEquals(1, container.getChildCount());
     }
 
+    @Test public void coloredDigitsAndOverflowKeepTheOriginalAlphaGeometry() {
+        CountDrawable drawable = create();
+        for (int count = 1; count <= 10; count++) {
+            int[] original = draw(drawable, count, Color.WHITE);
+            int[] colored = draw(drawable, count, 0xff03d769);
+            for (int i = 0; i < original.length; i++) {
+                assertEquals(Color.alpha(original[i]), Color.alpha(colored[i]));
+                if (Color.alpha(colored[i]) == 255) {
+                    assertEquals(0xff03d769, colored[i]);
+                }
+            }
+            assertArrayEquals(original, draw(drawable, count, Color.WHITE));
+        }
+    }
+
     @Test public void missingResourcesFailBeforeNativeIconsCanBeSuppressed() {
         CountDrawable drawable = new CountDrawable(null);
         assertFalse(drawable.isHealthy());

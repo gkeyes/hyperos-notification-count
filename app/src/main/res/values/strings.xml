@@ -1,10 +1,13 @@
 <resources>
     <string name="app_name">HyperOS 通知数量</string>
     <string name="module_description">将 HyperOS 4 顶部通知图标替换为通知总条数：1–9，超过 9 显示 ···。仅作用于系统界面。</string>
-    <string name="settings_title">计数过滤</string>
+    <string name="settings_title">通知数量</string>
     <string name="settings_version">版本 %1$s · 系统界面</string>
     <string name="settings_back">返回</string>
-    <string name="settings_intro">开启开关 = 从数量中排除这类通知。所有开关默认关闭，只改变计数，不清除通知。</string>
+    <string name="settings_intro">下方过滤开关开启 = 从数量中排除这类通知。过滤默认全部关闭，只改变计数，不清除通知。取色开关单独控制数字的颜色。</string>
+    <string name="settings_section_display">显示样式</string>
+    <string name="settings_icon_color_title">跟随通知 App 图标颜色</string>
+    <string name="settings_icon_color_description">默认关闭。开启后，圆圈和数字使用最新参与计数通知的 App 图标候选色，并适应深浅背景。取不到彩色时沿用系统黑白色。数字仍表示通知总数。</string>
     <string name="settings_overlap">一条通知可能同时属于多类；命中任一已开启的开关就会被排除。建议每次只开一项，观察状态栏数字的变化，再决定组合。</string>
     <string name="settings_selected">已开启 %1$d 项过滤</string>
     <string name="settings_ready">设置已连接。变更会实时发送到同一空间的系统界面；首次更新模块仍需按平时的方式使新版生效。</string>

@@ -1,6 +1,8 @@
 package dev.hyperos.notificationcount.settings;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import android.content.SharedPreferences;
 
@@ -13,6 +15,37 @@ import org.junit.Test;
 
 public class SettingsStoreTest {
     private static final Executor DIRECT = Runnable::run;
+
+    @Test public void iconColorDefaultsOffAndPersistsIndependentlyOfFilterReset() {
+        SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
+        SettingsStore store = connected(remote);
+        assertFalse(store.state().iconColorEnabled);
+        store.setIconColorEnabled(true);
+        store.setExcluded(NotificationType.MEDIA, true);
+        store.reset();
+        assertState(store, 0, SettingsStore.Status.READY);
+        assertTrue(store.state().iconColorEnabled);
+        SettingsStore reopened = connected(remote.freshConnection());
+        assertTrue(reopened.state().iconColorEnabled);
+        reopened.setIconColorEnabled(false);
+        assertFalse(connected(remote.freshConnection()).state().iconColorEnabled);
+    }
+
+    @Test public void aFailedColorSaveRollsBackBothFieldsAndRequiresAcknowledgedRetry() {
+        SettingsTestDoubles.OptimisticPreferences remote =
+                new SettingsTestDoubles.OptimisticPreferences(NotificationType.FOCUS.bit);
+        SettingsStore store = connected(remote);
+        remote.queueCommitResults(false, false, false);
+        store.setIconColorEnabled(true);
+        assertFalse(store.state().iconColorEnabled);
+        assertFalse(FilterPreferences.readIconColor(remote.preferences));
+        assertState(store, NotificationType.FOCUS.bit, SettingsStore.Status.SAVE_FAILED);
+        store.retry();
+        assertState(store, NotificationType.FOCUS.bit, SettingsStore.Status.UNAVAILABLE);
+        store.retry();
+        assertState(store, NotificationType.FOCUS.bit, SettingsStore.Status.READY);
+        assertFalse(store.state().iconColorEnabled);
+    }
 
     @Test
     public void initialStateIsWaitingWithEveryFilterOff() {

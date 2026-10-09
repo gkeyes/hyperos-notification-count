@@ -31,6 +31,7 @@ class SettingsActivity : ComponentActivity() {
                     SettingsScreen(
                         state = state,
                         onFilterChange = store::setExcluded,
+                        onIconColorChange = store::setIconColorEnabled,
                         onReset = store::reset,
                         onRetry = store::retry,
                         onBack = ::finish,

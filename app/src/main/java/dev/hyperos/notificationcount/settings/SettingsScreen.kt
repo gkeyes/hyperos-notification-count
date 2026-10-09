@@ -67,6 +67,7 @@ private val filterGroups = listOf(
 internal fun SettingsScreen(
     state: SettingsStore.State,
     onFilterChange: (NotificationType, Boolean) -> Unit,
+    onIconColorChange: (Boolean) -> Unit,
     onReset: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
@@ -134,6 +135,30 @@ internal fun SettingsScreen(
                     text = stringResource(R.string.settings_selected, Integer.bitCount(state.mask)),
                     modifier = Modifier.testTag("settings-selected"),
                     style = MiuixTheme.textStyles.body1,
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            SmallTitle(text = stringResource(R.string.settings_section_display))
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                val title = stringResource(R.string.settings_icon_color_title)
+                val description = stringResource(R.string.settings_icon_color_description)
+                SwitchPreference(
+                    title = title,
+                    summary = description,
+                    checked = state.iconColorEnabled,
+                    enabled = editable,
+                    onCheckedChange = onIconColorChange,
+                    modifier = Modifier.testTag("icon-color-switch").clearAndSetSemantics {
+                        contentDescription = "$title。$description"
+                        role = Role.Switch
+                        toggleableState = if (state.iconColorEnabled) ToggleableState.On else ToggleableState.Off
+                        if (editable) {
+                            onClick {
+                                onIconColorChange(!state.iconColorEnabled)
+                                true
+                            }
+                        } else disabled()
+                    },
                 )
             }
             filterGroups.forEach { group ->

@@ -1,7 +1,12 @@
 package dev.hyperos.notificationcount.hook;
 
 import android.content.res.Resources;
+import android.content.Context;
 import android.graphics.Rect;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Process;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,9 +19,15 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.WeakHashMap;
+import java.util.concurrent.Executors;
 
 import dev.hyperos.notificationcount.NotificationCountModule;
+import dev.hyperos.notificationcount.core.AppIconSource;
+import dev.hyperos.notificationcount.core.IconColorCoordinator;
+import dev.hyperos.notificationcount.core.ReadableIconColor;
+import dev.hyperos.notificationcount.render.AppIconColorLoader;
 import dev.hyperos.notificationcount.render.CountDrawable;
 
 /** Retains native children and bindings; the number lives in the top-bar container's overlay. */
@@ -40,6 +51,9 @@ final class StatusBarRenderer {
     private final Method setMeasuredDimension;
     private int count;
     private boolean ready;
+    private AppIconSource colorSource;
+    private Integer iconColor;
+    private IconColorCoordinator colors;
 
     StatusBarRenderer(NotificationCountModule module, HostAccess access) throws Throwable {
         this.module = module;
@@ -75,6 +89,22 @@ final class StatusBarRenderer {
         state.updateDimensions();
         if (view.isAttachedToWindow()) state.attach();
         state.update();
+        if (colors == null) {
+            Context application = view.getContext().getApplicationContext();
+            Context host = application != null ? application : view.getContext();
+            Handler main = new Handler(Looper.getMainLooper());
+            colors = new IconColorCoordinator(source -> AppIconColorLoader.load(host, source),
+                    Executors.newSingleThreadExecutor(task -> {
+                        Thread thread = new Thread(() -> {
+                            try { Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND); }
+                            catch (SecurityException ignored) { }
+                            task.run();
+                        }, "HyperOSNotificationColor");
+                        thread.setDaemon(true);
+                        return thread;
+                    }), main::post, SystemClock::elapsedRealtime, this::setIconColor);
+        }
+        colors.select(colorSource);
         view.requestLayout();
     }
 
@@ -88,7 +118,9 @@ final class StatusBarRenderer {
         }
     }
 
-    void setCount(int count, boolean ready) throws Throwable {
+    void setCount(int count, boolean ready, AppIconSource source) throws Throwable {
+        colorSource = ready ? source : null;
+        if (colors != null) colors.select(colorSource);
         if (this.count == count && this.ready == ready) return;
         this.count = count;
         this.ready = ready;
@@ -101,6 +133,8 @@ final class StatusBarRenderer {
 
     void fallback() {
         ready = false;
+        colorSource = null;
+        if (colors != null) colors.select(null);
         for (State state : new ArrayList<>(states.values())) {
             state.drawable.setCount(0);
             View view = state.view.get();
@@ -109,6 +143,13 @@ final class StatusBarRenderer {
                 view.requestLayout();
                 view.invalidate();
             }
+        }
+    }
+
+    private void setIconColor(Integer color) {
+        iconColor = color;
+        for (State state : new ArrayList<>(states.values())) {
+            try { state.updateTint(); } catch (Throwable error) { state.disable(error); }
         }
     }
 
@@ -160,6 +201,9 @@ final class StatusBarRenderer {
         boolean attached;
         boolean receiverRegistered;
         boolean failed;
+        boolean tintApplied;
+        int lastSystemTint;
+        Integer lastIconColor;
 
         State(ViewGroup view, Object owner, Object dispatcher, Resources resources) {
             this.view = new WeakReference<>(view);
@@ -216,7 +260,13 @@ final class StatusBarRenderer {
 
         void updateTint() throws Throwable {
             ViewGroup current = view.get();
-            if (current != null) drawable.setTint((int) HostAccess.call(getTint, null, tintAreas, current, tint));
+            if (current == null) return;
+            int systemTint = (int) HostAccess.call(getTint, null, tintAreas, current, tint);
+            if (tintApplied && lastSystemTint == systemTint && Objects.equals(lastIconColor, iconColor)) return;
+            drawable.setTint(ReadableIconColor.forSystemTint(iconColor, systemTint));
+            lastSystemTint = systemTint;
+            lastIconColor = iconColor;
+            tintApplied = true;
         }
 
         void update() throws Throwable {

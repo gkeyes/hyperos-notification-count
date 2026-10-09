@@ -8,6 +8,7 @@ import dev.hyperos.notificationcount.core.NotificationType;
 public final class FilterPreferences {
     public static final String GROUP = "notification_filters";
     public static final String EXCLUDED_MASK = "excluded_types";
+    public static final String ICON_COLOR_ENABLED = "icon_color_enabled";
     public static final int KNOWN_MASK;
 
     static {
@@ -20,5 +21,9 @@ public final class FilterPreferences {
 
     public static int read(SharedPreferences preferences) {
         return preferences.getInt(EXCLUDED_MASK, 0) & KNOWN_MASK;
+    }
+
+    public static boolean readIconColor(SharedPreferences preferences) {
+        return preferences.getBoolean(ICON_COLOR_ENABLED, false);
     }
 }
