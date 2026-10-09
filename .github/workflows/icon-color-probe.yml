@@ -1,0 +1,37 @@
+name: Build standalone icon color probe
+
+on:
+  push:
+    branches: [codex/icon-color-probe]
+    paths:
+      - tools/icon-color-probe/**
+      - .github/workflows/icon-color-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  icon-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'platforms;android-37.0 build-tools;37.0.0'
+          log-accepted-android-sdk-licenses: 'false'
+      - name: Check shell launcher
+        run: sh -n tools/icon-color-probe/run_icon_probe.sh
+      - name: Test sampler and build executable DEX
+        run: bash tools/icon-color-probe/build_cloud.sh
+      - name: Upload runnable probe
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: icon-color-probe-0.2
+          path: tools/icon-color-probe/outputs/
+          if-no-files-found: error
