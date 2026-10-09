@@ -40,4 +40,16 @@ public class ReadableIconColorTest {
             }
         }
     }
+
+    @Test public void badgeDigitsPickTheMoreReadableOfBlackOrWhite() {
+        assertEquals(0xffffffff, ReadableIconColor.glyphOn(0xff1f3a8a));
+        assertEquals(0xff000000, ReadableIconColor.glyphOn(0xfff5d547));
+        assertEquals(0x88000000, ReadableIconColor.glyphOn(0x88f5d547));
+        for (int r = 0; r <= 255; r += 51) for (int g = 0; g <= 255; g += 51) for (int b = 0; b <= 255; b += 51) {
+            int badge = 0xff000000 | (r << 16) | (g << 8) | b;
+            int glyph = ReadableIconColor.glyphOn(badge);
+            int other = glyph == 0xffffffff ? 0xff000000 : 0xffffffff;
+            assertTrue(ReadableIconColor.contrast(glyph, badge) >= ReadableIconColor.contrast(other, badge));
+        }
+    }
 }

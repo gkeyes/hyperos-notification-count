@@ -82,6 +82,55 @@ public class CountDrawableAndroidTest {
         }
     }
 
+    @Test public void glyphColorFillsOnlyTheDigitOpening() {
+        CountDrawable drawable = create();
+        // Large enough that every digit opening has fully transparent pixels.
+        drawable.setIconSize(64);
+        for (int count = 1; count <= 10; count++) {
+            drawable.setGlyphColor(null);
+            int[] knockout = drawLarge(drawable, count, 0xff03d769);
+            drawable.setGlyphColor(0xff000000);
+            int[] filled = drawLarge(drawable, count, 0xff03d769);
+            int opened = 0;
+            for (int i = 0; i < knockout.length; i++) {
+                if (Color.alpha(knockout[i]) == 0 && Color.alpha(filled[i]) > 0) {
+                    opened++;
+                    assertTrue("Fill escaped the disc for count " + count, insideDisc(i));
+                }
+            }
+            assertTrue("Digit opening not filled for count " + count, opened > 0);
+        }
+        drawable.setGlyphColor(null);
+        assertNull(drawable.getGlyphColor());
+        assertTrue(drawable.getFailureReason(), drawable.isHealthy());
+    }
+
+    @Test public void heavierWeightsOpenWiderDigitsInsideTheSameDisc() {
+        CountDrawable drawable = create();
+        drawable.setIconSize(64);
+        for (int count = 1; count <= 10; count++) {
+            long previous = Long.MAX_VALUE;
+            int[] firstBounds = null;
+            for (int weight = 0; weight <= 2; weight++) {
+                drawable.setWeight(weight);
+                int[] pixels = drawLarge(drawable, count, Color.WHITE);
+                long coverage = 0;
+                for (int pixel : pixels) coverage += Color.alpha(pixel);
+                assertTrue("Weight " + weight + " must thin the disc for count " + count, coverage < previous);
+                previous = coverage;
+                Rect bounds = visibleBoundsLarge(pixels);
+                int[] packed = {bounds.left, bounds.top, bounds.right, bounds.bottom};
+                if (firstBounds == null) firstBounds = packed;
+                else assertArrayEquals("Disc outline must not move", firstBounds, packed);
+            }
+        }
+        drawable.setWeight(7);
+        assertEquals(2, drawable.getWeight());
+        drawable.setWeight(-3);
+        assertEquals(0, drawable.getWeight());
+        assertTrue(drawable.getFailureReason(), drawable.isHealthy());
+    }
+
     @Test public void missingResourcesFailBeforeNativeIconsCanBeSuppressed() {
         CountDrawable drawable = new CountDrawable(null);
         assertFalse(drawable.isHealthy());
@@ -124,6 +173,35 @@ public class CountDrawableAndroidTest {
         assertTrue(restoredBounds.height() < visibleBounds(after).height());
         // Native VectorDrawable caches only grow: shrinking resamples the larger bitmap,
         // so antialiased alpha>0 pixel totals need not match its first 16px rasterization.
+    }
+
+    /** Disc of the 16-unit vector drawn at 4px per unit across a 64px bitmap. */
+    private boolean insideDisc(int index) {
+        float x = (index % 64 + .5f) / 4f, y = (index / 64 + .5f) / 4f;
+        float dx = x - 7f, dy = y - 8.7f;
+        return dx * dx + dy * dy <= 6f * 6f;
+    }
+
+    private Rect visibleBoundsLarge(int[] pixels) {
+        Rect bounds = new Rect(64, 64, 0, 0);
+        for (int i = 0; i < pixels.length; i++) {
+            if (Color.alpha(pixels[i]) == 0) continue;
+            int x = i % 64, y = i / 64;
+            bounds.union(x, y, x + 1, y + 1);
+        }
+        return bounds;
+    }
+
+    private int[] drawLarge(CountDrawable drawable, int count, int tint) {
+        Bitmap bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888);
+        drawable.setBounds(0, 0, 64, 64);
+        drawable.setCount(count);
+        drawable.setTint(tint);
+        drawable.draw(new Canvas(bitmap));
+        int[] pixels = new int[64 * 64];
+        bitmap.getPixels(pixels, 0, 64, 0, 0, 64, 64);
+        bitmap.recycle();
+        return pixels;
     }
 
     private CountDrawable create() {

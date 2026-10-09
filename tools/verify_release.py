@@ -272,7 +272,8 @@ def verify_count_vector(xmltree, source):
                 f"Compiled count vector must have a 16x16 viewport: {key}")
     expected = ET.parse(source).getroot()
     paths = vector["children"]
-    require(len(paths) == len(expected) == 2, "Count vector must retain exactly two paths")
+    # Solid badges merge disc and glyph into one evenOdd path so the glyph is knocked out.
+    require(len(paths) == len(expected) == 1, "Count vector must be one solid knockout path")
     android = "{http://schemas.android.com/apk/res/android}"
     for actual, original in zip(paths, expected):
         require(actual["name"] == original.tag == "path" and not actual["children"],
@@ -293,8 +294,10 @@ def verify_count_resources(apk, build_tools):
     # AAPT2 resolves resource-table paths, which may differ after resource optimization.
     table = run(build_tools / "aapt2", "dump", "resources", apk)
     entries = list(re.finditer(r"^\s*resource (0x[0-9a-fA-F]+) (\S+).*?$", table, re.M))
-    expected = {"notification_count_" + suffix for suffix in
-                [*map(str, range(1, 10)), "overflow"]}
+    states = [*map(str, range(1, 10)), "overflow"]
+    # Normal weight plus the medium/bold variants selectable in settings.
+    expected = {"notification_count_" + state + weight for state in states
+                for weight in ("", "_medium", "_bold")}
     found = {}
     for index, entry in enumerate(entries):
         name = entry[2].split(":")[-1]
@@ -309,9 +312,9 @@ def verify_count_resources(apk, build_tools):
         for file in files:
             source = MODULE_ROOT / "app/src/main/res/drawable" / (name + ".xml")
             verify_count_vector(run(build_tools / "aapt", "dump", "xmltree", apk, file), source)
-    require(set(found) == expected and len(set(found.values())) == 10,
-            "APK must retain all ten independent notification count vector resources")
-    print("Count vectors verified: all ten compiled resources, 16dp/16x16, exact paths, white/evenOdd")
+    require(set(found) == expected and len(set(found.values())) == len(expected),
+            "APK must retain every notification count vector resource (10 states x 3 weights)")
+    print(f"Count vectors verified: all {len(expected)} compiled resources, 16dp/16x16, exact paths, white/evenOdd")
 
 
 def verify_settings_ui(apk, mapping=None, build_tools=None):

@@ -19,19 +19,85 @@ public final class SettingsStore {
         public final boolean iconColorEnabled;
         public final boolean temporaryColor;
         public final int colorDurationSeconds;
+        public final int digitColor;
+        public final int badgeContrast;
+        public final int digitWeight;
         public final Status status;
 
         State(int mask, Status status) {
-            this(mask, false, false, FilterPreferences.DEFAULT_COLOR_DURATION, status);
+            this(Values.DEFAULT.withMask(mask), status);
         }
 
-        State(int mask, boolean iconColorEnabled, boolean temporaryColor,
-                int colorDurationSeconds, Status status) {
-            this.mask = mask;
-            this.iconColorEnabled = iconColorEnabled;
-            this.temporaryColor = temporaryColor;
-            this.colorDurationSeconds = colorDurationSeconds;
+        State(Values values, Status status) {
+            this.mask = values.mask;
+            this.iconColorEnabled = values.color;
+            this.temporaryColor = values.temporary;
+            this.colorDurationSeconds = values.duration;
+            this.digitColor = values.digitColor;
+            this.badgeContrast = values.contrast;
+            this.digitWeight = values.weight;
             this.status = status;
+        }
+
+        Values values() {
+            return new Values(mask, iconColorEnabled, temporaryColor, colorDurationSeconds,
+                    digitColor, badgeContrast, digitWeight);
+        }
+    }
+
+    /** One atomic group of saved settings. */
+    static final class Values {
+        static final Values DEFAULT = new Values(0, false, false,
+                FilterPreferences.DEFAULT_COLOR_DURATION, FilterPreferences.DIGIT_COLOR_AUTO,
+                FilterPreferences.DEFAULT_BADGE_CONTRAST, FilterPreferences.WEIGHT_NORMAL);
+
+        final int mask;
+        final boolean color;
+        final boolean temporary;
+        final int duration;
+        final int digitColor;
+        final int contrast;
+        final int weight;
+
+        Values(int mask, boolean color, boolean temporary, int duration,
+                int digitColor, int contrast, int weight) {
+            this.mask = mask & FilterPreferences.KNOWN_MASK;
+            this.color = color;
+            this.temporary = temporary;
+            this.duration = FilterPreferences.normalizeColorDuration(duration);
+            this.digitColor = FilterPreferences.normalizeDigitColor(digitColor);
+            this.contrast = FilterPreferences.normalizeBadgeContrast(contrast);
+            this.weight = FilterPreferences.normalizeDigitWeight(weight);
+        }
+
+        static Values read(SharedPreferences preferences) {
+            return new Values(FilterPreferences.read(preferences),
+                    FilterPreferences.readIconColor(preferences),
+                    FilterPreferences.readTemporaryColor(preferences),
+                    FilterPreferences.readColorDuration(preferences),
+                    FilterPreferences.readDigitColor(preferences),
+                    FilterPreferences.readBadgeContrast(preferences),
+                    FilterPreferences.readDigitWeight(preferences));
+        }
+
+        boolean write(SharedPreferences target) {
+            return target.edit().putInt(FilterPreferences.EXCLUDED_MASK, mask)
+                    .putBoolean(FilterPreferences.ICON_COLOR_ENABLED, color)
+                    .putBoolean(FilterPreferences.ICON_COLOR_TEMPORARY, temporary)
+                    .putInt(FilterPreferences.ICON_COLOR_DURATION, duration)
+                    .putInt(FilterPreferences.DIGIT_COLOR, digitColor)
+                    .putInt(FilterPreferences.BADGE_CONTRAST, contrast)
+                    .putInt(FilterPreferences.DIGIT_WEIGHT, weight).commit();
+        }
+
+        Values withMask(int value) {
+            return new Values(value, color, temporary, duration, digitColor, contrast, weight);
+        }
+
+        boolean sameAs(Values other) {
+            return mask == other.mask && color == other.color && temporary == other.temporary
+                    && duration == other.duration && digitColor == other.digitColor
+                    && contrast == other.contrast && weight == other.weight;
         }
     }
 
@@ -76,12 +142,12 @@ public final class SettingsStore {
         preferences = null;
         connection = null;
         source = null;
-        publish(state.mask, Status.UNAVAILABLE);
+        publish(state.values(), Status.UNAVAILABLE);
     }
 
     public void retry() {
         if (source == null) {
-            publish(state.mask, Status.WAITING);
+            publish(state.values(), Status.WAITING);
         } else if (state.status != Status.CONNECTING && state.status != Status.SAVING) {
             load();
         }
@@ -90,35 +156,28 @@ public final class SettingsStore {
     private void load() {
         long token = ++generation;
         Supplier<SharedPreferences> currentSource = source;
-        int confirmedMask = state.mask;
-        boolean confirmedColor = state.iconColorEnabled;
-        boolean confirmedTemporary = state.temporaryColor;
-        int confirmedDuration = state.colorDurationSeconds;
+        Values confirmed = state.values();
         boolean restore = needsRestore;
         preferences = null;
-        publish(confirmedMask, Status.CONNECTING);
+        publish(confirmed, Status.CONNECTING);
         worker.execute(() -> {
             try {
                 SharedPreferences loaded = currentSource.get();
                 // libxposed's app-side Editor updates its cache before the IPC completes.
-                // After a failed save, re-confirm the last acknowledged mask before enabling UI.
-                if (restore && !write(loaded, confirmedMask, confirmedColor, confirmedTemporary, confirmedDuration)) {
+                // After a failed save, re-confirm the last acknowledged values before enabling UI.
+                if (restore && !confirmed.write(loaded)) {
                     throw new IllegalStateException("Remote preferences unavailable");
                 }
-                int mask = FilterPreferences.read(loaded);
-                boolean color = FilterPreferences.readIconColor(loaded);
-                boolean temporary = FilterPreferences.readTemporaryColor(loaded);
-                int duration = FilterPreferences.readColorDuration(loaded);
+                Values values = Values.read(loaded);
                 main.execute(() -> {
                     if (token != generation) return;
                     preferences = loaded;
                     needsRestore = false;
-                    publish(mask, color, temporary, duration, Status.READY);
+                    publish(values, Status.READY);
                 });
             } catch (RuntimeException error) {
                 main.execute(() -> {
-                    if (token == generation) publish(confirmedMask, confirmedColor,
-                            confirmedTemporary, confirmedDuration, Status.UNAVAILABLE);
+                    if (token == generation) publish(confirmed, Status.UNAVAILABLE);
                 });
             }
         });
@@ -131,74 +190,74 @@ public final class SettingsStore {
     public void reset() { setMask(0); }
 
     public void setIconColorEnabled(boolean enabled) {
-        setValues(state.mask, enabled, state.temporaryColor, state.colorDurationSeconds);
+        Values v = state.values();
+        setValues(new Values(v.mask, enabled, v.temporary, v.duration, v.digitColor, v.contrast, v.weight));
     }
 
     public void setTemporaryColor(boolean temporary) {
-        setValues(state.mask, state.iconColorEnabled, temporary, state.colorDurationSeconds);
+        Values v = state.values();
+        setValues(new Values(v.mask, v.color, temporary, v.duration, v.digitColor, v.contrast, v.weight));
     }
 
     public void setColorDurationSeconds(int seconds) {
-        setValues(state.mask, state.iconColorEnabled, state.temporaryColor,
-                FilterPreferences.normalizeColorDuration(seconds));
+        Values v = state.values();
+        setValues(new Values(v.mask, v.color, v.temporary, seconds, v.digitColor, v.contrast, v.weight));
+    }
+
+    public void setDigitColor(int digitColor) {
+        Values v = state.values();
+        setValues(new Values(v.mask, v.color, v.temporary, v.duration, digitColor, v.contrast, v.weight));
+    }
+
+    public void setBadgeContrast(int tenths) {
+        Values v = state.values();
+        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, tenths, v.weight));
+    }
+
+    public void setDigitWeight(int weight) {
+        Values v = state.values();
+        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, v.contrast, weight));
     }
 
     private void setMask(int mask) {
-        setValues(mask, state.iconColorEnabled, state.temporaryColor, state.colorDurationSeconds);
+        setValues(state.values().withMask(mask));
     }
 
-    private void setValues(int mask, boolean color, boolean temporary, int duration) {
+    private void setValues(Values next) {
         if (state.status != Status.READY || preferences == null) return;
-        int nextMask = mask & FilterPreferences.KNOWN_MASK;
-        int previousMask = state.mask;
-        boolean previousColor = state.iconColorEnabled;
-        boolean previousTemporary = state.temporaryColor;
-        int previousDuration = state.colorDurationSeconds;
-        if (previousMask == nextMask && previousColor == color
-                && previousTemporary == temporary && previousDuration == duration) return;
+        Values previous = state.values();
+        if (previous.sameAs(next)) return;
         long token = generation;
         SharedPreferences target = preferences;
-        publish(nextMask, color, temporary, duration, Status.SAVING);
+        publish(next, Status.SAVING);
         worker.execute(() -> {
             boolean saved;
             try {
-                saved = write(target, nextMask, color, temporary, duration);
+                saved = next.write(target);
             } catch (RuntimeException error) {
                 saved = false;
             }
             if (!saved) {
                 // Restore the optimistic library cache as well as attempting a remote rollback.
-                try { write(target, previousMask, previousColor, previousTemporary, previousDuration); }
+                try { previous.write(target); }
                 catch (RuntimeException ignored) { }
             }
             boolean acknowledged = saved;
             main.execute(() -> {
                 if (token != generation) return;
                 if (acknowledged) {
-                    publish(nextMask, color, temporary, duration, Status.READY);
+                    publish(next, Status.READY);
                 } else {
                     preferences = null;
                     needsRestore = true;
-                    publish(previousMask, previousColor, previousTemporary, previousDuration, Status.SAVE_FAILED);
+                    publish(previous, Status.SAVE_FAILED);
                 }
             });
         });
     }
 
-    private void publish(int mask, Status status) {
-        publish(mask, state.iconColorEnabled, state.temporaryColor, state.colorDurationSeconds, status);
-    }
-
-    private static boolean write(SharedPreferences target, int mask, boolean color,
-            boolean temporary, int duration) {
-        return target.edit().putInt(FilterPreferences.EXCLUDED_MASK, mask)
-                .putBoolean(FilterPreferences.ICON_COLOR_ENABLED, color)
-                .putBoolean(FilterPreferences.ICON_COLOR_TEMPORARY, temporary)
-                .putInt(FilterPreferences.ICON_COLOR_DURATION, duration).commit();
-    }
-
-    private void publish(int mask, boolean color, boolean temporary, int duration, Status status) {
-        state = new State(mask, color, temporary, duration, status);
+    private void publish(Values values, Status status) {
+        state = new State(values, status);
         for (Consumer<State> observer : new LinkedHashSet<>(observers)) observer.accept(state);
     }
 }

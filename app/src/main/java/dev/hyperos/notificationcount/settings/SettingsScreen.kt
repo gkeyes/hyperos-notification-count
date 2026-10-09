@@ -72,6 +72,9 @@ internal fun SettingsScreen(
     onIconColorChange: (Boolean) -> Unit,
     onTemporaryColorChange: (Boolean) -> Unit,
     onColorDurationChange: (Int) -> Unit,
+    onDigitColorChange: (Int) -> Unit,
+    onBadgeContrastChange: (Int) -> Unit,
+    onDigitWeightChange: (Int) -> Unit,
     onReset: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
@@ -202,6 +205,50 @@ internal fun SettingsScreen(
                         if (!durationEditable) disabled()
                     },
                 )
+                val colorStyleEditable = editable && state.iconColorEnabled
+                StyleDropdown(
+                    title = stringResource(R.string.settings_digit_color_title),
+                    summary = stringResource(R.string.settings_digit_color_description),
+                    labels = listOf(
+                        stringResource(R.string.settings_digit_color_auto),
+                        stringResource(R.string.settings_digit_color_white),
+                        stringResource(R.string.settings_digit_color_black),
+                        stringResource(R.string.settings_digit_color_transparent),
+                    ),
+                    values = FilterPreferences.DIGIT_COLORS,
+                    selected = state.digitColor,
+                    enabled = colorStyleEditable,
+                    tag = "digit-color",
+                    onChange = onDigitColorChange,
+                )
+                StyleDropdown(
+                    title = stringResource(R.string.settings_badge_contrast_title),
+                    summary = stringResource(R.string.settings_badge_contrast_description),
+                    labels = listOf(
+                        stringResource(R.string.settings_badge_contrast_soft),
+                        stringResource(R.string.settings_badge_contrast_standard),
+                        stringResource(R.string.settings_badge_contrast_high),
+                    ),
+                    values = FilterPreferences.BADGE_CONTRASTS,
+                    selected = state.badgeContrast,
+                    enabled = colorStyleEditable,
+                    tag = "badge-contrast",
+                    onChange = onBadgeContrastChange,
+                )
+                StyleDropdown(
+                    title = stringResource(R.string.settings_digit_weight_title),
+                    summary = stringResource(R.string.settings_digit_weight_description),
+                    labels = listOf(
+                        stringResource(R.string.settings_digit_weight_normal),
+                        stringResource(R.string.settings_digit_weight_medium),
+                        stringResource(R.string.settings_digit_weight_bold),
+                    ),
+                    values = FilterPreferences.DIGIT_WEIGHTS,
+                    selected = state.digitWeight,
+                    enabled = editable,
+                    tag = "digit-weight",
+                    onChange = onDigitWeightChange,
+                )
             }
             filterGroups.forEach { group ->
                 Spacer(Modifier.height(16.dp))
@@ -260,6 +307,34 @@ internal fun SettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun StyleDropdown(
+    title: String,
+    summary: String,
+    labels: List<String>,
+    values: List<Int>,
+    selected: Int,
+    enabled: Boolean,
+    tag: String,
+    onChange: (Int) -> Unit,
+) {
+    val index = values.indexOf(selected).coerceAtLeast(0)
+    val label = labels[index]
+    OverlayDropdownPreference(
+        title = title,
+        summary = summary,
+        items = labels,
+        selectedIndex = index,
+        enabled = enabled,
+        onSelectedIndexChange = { onChange(values[it]) },
+        modifier = Modifier.testTag(tag).semantics {
+            stateDescription = label
+            // Miuix removes the click handler while disabled; expose that state to accessibility.
+            if (!enabled) disabled()
+        },
+    )
 }
 
 private fun statusLabel(status: SettingsStore.Status): Int = when (status) {
