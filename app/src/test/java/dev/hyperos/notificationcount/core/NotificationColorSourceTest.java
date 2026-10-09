@@ -9,6 +9,15 @@ import org.junit.Test;
 public class NotificationColorSourceTest {
     private final NotificationArrivals arrivals = new NotificationArrivals();
 
+    @Test public void pipelineReplacementCannotReuseAnOldHighlightArrivalToken() {
+        NotificationSnapshot first = item("first", 100, 0, null, false, true, false, 0);
+        newest(0, first);
+        long old = arrivals.arrivalOf(first);
+        arrivals.clear();
+        newest(0, first);
+        assertTrue(arrivals.arrivalOf(first) > old);
+    }
+
     @Test public void seedsByPostTimeRatherThanCollectionIterationOrder() {
         NotificationSnapshot latest = item("latest", 200, 0, null, false, true, false, 0);
         NotificationSnapshot older = item("older", 100, 0, null, false, true, false, 0);

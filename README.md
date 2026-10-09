@@ -1,4 +1,4 @@
-# HyperOS 通知数量 0.1.5
+# HyperOS 通知数量 0.1.6
 
 基于 libxposed API **102.0.0**，将 HyperOS 4 顶部通知 App 图标替换为一个通知数量图标。设置页从 LSPosed / Vector 的模块设置入口打开，**不显示桌面图标**。启用模块或安装新版后，在 SystemUI 下次加载模块时生效；新版加载后的过滤开关通过框架实时更新。
 
@@ -16,7 +16,7 @@
 
 ## 过滤设置
 
-设置页使用 [Miuix 0.9.4](https://github.com/compose-miuix-ui/miuix/releases/tag/v0.9.4) 的 `TopAppBar`、`Card`、`SmallTitle`、`SwitchPreference` 和按钮组件，跟随系统深浅色与字体大小。原有 15 项过滤及 API 102 配置格式保持兼容，可从固定签名的 0.1.1–0.1.4 直接更新。
+设置页使用 [Miuix 0.9.4](https://github.com/compose-miuix-ui/miuix/releases/tag/v0.9.4) 的 `TopAppBar`、`Card`、`SmallTitle`、`SwitchPreference`、`OverlayDropdownPreference` 和按钮组件，跟随系统深浅色与字体大小。原有 15 项过滤及 API 102 配置格式保持兼容，可从固定签名的 0.1.1–0.1.5 直接更新。
 
 15 个开关全部默认关闭，**开启表示从计数中排除**。只修改数量，不取消通知、不影响通知面板，也不改超级岛的展示。条目可能同时属于多类，命中任一开启的开关即排除。建议每次只开一项测试，然后再组合。
 
@@ -32,9 +32,13 @@
 
 取色复用独立探针 0.2 的机制：优先读取 launch activity 声明的图标资源，否则读取 Application 图标资源，在后台软件绘制为 64×64，再用 RGB 直方图筛选彩色候选。不读取通知正文、头像，不启动 App，不请求额外权限；不读取桌面主题替换图标。无声明图标、近黑白或资源访问失败时只回退系统黑白 tint，不影响计数。用户实测探针读到微信 `#03D769`；独立 root 探针结果不等同于本模块在 SystemUI 中已通过真机验证。
 
-每个 App / Android user 分开缓存，最多 64 项，仅保留色值，不缓存 Bitmap 或 Drawable。彩色色值缓存 15 分钟，失败或无彩色缓存 1 分钟；到期后由下次通知事件触发重取，无定时器、轮询或唤醒锁。后台最多同时读取一枚图标，快速切换来源时合并中间请求；迟到的结果不能覆盖当前来源或重新打开已关闭的取色。首次读取期间使用系统 tint。根据 DarkIconDispatcher 的原生黑白选择推断深浅背景，按预览调整亮度至黑/白背景对比度至少 4.5；不采样壁纸像素。
+每个 App / Android user 分开缓存，最多 64 项，仅保留色值，不缓存 Bitmap 或 Drawable。彩色色值缓存 15 分钟，失败或无彩色缓存 1 分钟；到期后由下次通知事件触发重取，无定时轮询或唤醒锁。后台最多同时读取一枚图标，快速切换来源时合并中间请求；迟到的结果不能覆盖当前来源或重新打开已关闭的取色。首次读取期间使用系统 tint。根据 DarkIconDispatcher 的原生黑白选择推断深浅背景，按预览调整亮度至黑/白背景对比度至少 4.5；不采样壁纸像素。
 
-取色和过滤配置作为一组保存；保存失败时回滚到两项最后确认状态。原「关闭全部过滤」按钮只重置过滤，不关闭取色。新版继续保留原签名、SystemUI 单一作用域、无桌面图标，以及 0.1.4 的 R8 / 资源裁剪 / DEX 压缩。
+0.1.6 新增「临时变色」开关，默认关闭，旧版持续着色行为保留。开启取色和临时变色后，可在 Miuix 下拉选项选择 1 / 3 / 5 / 10 / 15 秒，默认 5 秒。启用或修改模式 / 时长会从当前通知重新计时；新到达且参与计数的通知重新计时，即使来自同一个 App。同 key 进度更新、主题变化、重复刷新和移除最新通知不会延长期限；到期后保留数字，恢复 DarkIconDispatcher 当前的系统黑白 tint。关闭临时模式回到持续取色，关闭取色总开关立即恢复系统 tint 并取消回调。关闭全部过滤只重置过滤，保留颜色设置。
+
+临时模式只维护一项一次性到期回调，不增加每秒倒计时、定时轮询、唤醒锁或 Hook 点。期限使用 elapsed real time；灭屏期间已过期的颜色在首次重新绘制前清除，不等待暂停的 Handler uptime。后台取色迟到时也不能越过期限恢复彩色。清空 / 过滤全部通知后取消当前窗口，重新显示旧通知不会凭空触发新窗口；新通知或用户调整设置可重新触发。
+
+取色、临时模式、时长和过滤配置作为一组保存；保存失败时回滚到最后确认状态。新版继续保留原签名、SystemUI 单一作用域、无桌面图标，以及 0.1.4 的 R8 / 资源裁剪 / DEX 压缩。
 
 - `HideNotifsForOtherUsersCoordinator.attach(NotifPipeline)` 完成后捕获原生 pipeline / user manager，读取 `getAllNotifs()`，在主线程创建快照。
 - `NotifCollection.dispatchEventsAndRebuildList(String)`、本地划掉和清除完成后刷新，同时注册原生 collection、before-render 和 user/profile 监听，合并重复刷新。监听注册中途失败可以重试，重新挂载复用同一代理避免重复注册。计数不会跟随普通页/折叠页切换。
@@ -52,7 +56,7 @@ GitHub Actions 使用 JDK 21、Android SDK 37.0、Gradle 9.4.1、Android Gradle 
 
 模块 Hook API 依赖为 `compileOnly`，不把框架 API 类打进 APK。设置通信库及其官方 `XposedProvider` 随 APK 打包；编译后的 manifest 检查只允许这个 provider 和模块设置 Activity，并验证没有 LAUNCHER 或额外权限。定向移除设置页不使用的 AndroidX 启动 provider、profile receiver 和旧版动态接收器权限；仅允许两条 `required=false` 的 AndroidX Window 扩展库声明。JUnit / Robolectric / Compose UI test 只用于测试，不属于模块 APK。
 
-包名 `dev.hyperos.notificationcount`。首个本地测试包为 `0.1.0` / versionCode `1`；固定云端签名始于 `0.1.1` / versionCode `2`；原设置页版本为 `0.1.2` / versionCode `3`；Miuix 设置页始于 `0.1.3` / versionCode `4`，压缩版为 `0.1.4` / versionCode `5`，当前可选取色版为 `0.1.5` / versionCode `6`。保留既有交付文件及校验值。
+包名 `dev.hyperos.notificationcount`。首个本地测试包为 `0.1.0` / versionCode `1`；固定云端签名始于 `0.1.1` / versionCode `2`；原设置页版本为 `0.1.2` / versionCode `3`；Miuix 设置页始于 `0.1.3` / versionCode `4`，压缩版为 `0.1.4` / versionCode `5`，可选取色版为 `0.1.5` / versionCode `6`，当前临时变色版为 `0.1.6` / versionCode `7`。保留既有交付文件及校验值。
 
 后续检查与编译在 GitHub Actions 执行，本地不再启动构建。云端使用本模块专属固定签名，私钥通过仓库加密 Secrets 传入，不提交到 Git。首次从本地 `0.1.0` 测试包转到云端包时，两者签名不同，需要手动卸载旧测试包后安装；后续云端包可连续更新。
 

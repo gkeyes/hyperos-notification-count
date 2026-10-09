@@ -16,6 +16,44 @@ import org.junit.Test;
 public class SettingsStoreTest {
     private static final Executor DIRECT = Runnable::run;
 
+    @Test public void temporaryModeAndDurationPersistAcrossFreshCachesAndFilterReset() {
+        SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
+        SettingsStore store = connected(remote);
+        assertFalse(store.state().temporaryColor);
+        assertEquals(5, store.state().colorDurationSeconds);
+        store.setIconColorEnabled(true);
+        store.setTemporaryColor(true);
+        for (int duration : new int[]{1,3,5,10,15}) {
+            store.setColorDurationSeconds(duration);
+            assertEquals(duration, connected(remote.freshConnection()).state().colorDurationSeconds);
+        }
+        store.setExcluded(NotificationType.MEDIA, true);
+        store.reset();
+        SettingsStore fresh = connected(remote.freshConnection());
+        assertTrue(fresh.state().iconColorEnabled);
+        assertTrue(fresh.state().temporaryColor);
+        assertEquals(15, fresh.state().colorDurationSeconds);
+        assertEquals(0, fresh.state().mask);
+    }
+
+    @Test public void failedDurationSaveRestoresAllConfirmedColorSettingsAndRetryKeepsThem() {
+        SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
+        SettingsStore store = connected(remote);
+        store.setIconColorEnabled(true);
+        store.setTemporaryColor(true);
+        store.setColorDurationSeconds(3);
+        remote.queueCommitResults(false, false);
+        store.setColorDurationSeconds(15);
+        assertState(store, 0, SettingsStore.Status.SAVE_FAILED);
+        assertTrue(store.state().iconColorEnabled);
+        assertTrue(store.state().temporaryColor);
+        assertEquals(3, store.state().colorDurationSeconds);
+        assertEquals(3, FilterPreferences.readColorDuration(remote.preferences));
+        store.retry();
+        assertState(store, 0, SettingsStore.Status.READY);
+        assertEquals(3, connected(remote.freshConnection()).state().colorDurationSeconds);
+    }
+
     @Test public void iconColorDefaultsOffAndPersistsIndependentlyOfFilterReset() {
         SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
         SettingsStore store = connected(remote);

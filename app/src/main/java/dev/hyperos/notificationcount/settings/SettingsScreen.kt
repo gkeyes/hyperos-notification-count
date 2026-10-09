@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private data class FilterGroup(val title: Int, val types: List<NotificationType>)
@@ -68,6 +70,8 @@ internal fun SettingsScreen(
     state: SettingsStore.State,
     onFilterChange: (NotificationType, Boolean) -> Unit,
     onIconColorChange: (Boolean) -> Unit,
+    onTemporaryColorChange: (Boolean) -> Unit,
+    onColorDurationChange: (Int) -> Unit,
     onReset: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
@@ -158,6 +162,41 @@ internal fun SettingsScreen(
                                 true
                             }
                         } else disabled()
+                    },
+                )
+                val temporaryTitle = stringResource(R.string.settings_temporary_color_title)
+                val temporaryDescription = stringResource(R.string.settings_temporary_color_description)
+                val temporaryEditable = editable && state.iconColorEnabled
+                SwitchPreference(
+                    title = temporaryTitle,
+                    summary = temporaryDescription,
+                    checked = state.temporaryColor,
+                    enabled = temporaryEditable,
+                    onCheckedChange = onTemporaryColorChange,
+                    modifier = Modifier.testTag("temporary-color-switch").clearAndSetSemantics {
+                        contentDescription = "$temporaryTitle。$temporaryDescription"
+                        role = Role.Switch
+                        toggleableState = if (state.temporaryColor) ToggleableState.On else ToggleableState.Off
+                        if (temporaryEditable) {
+                            onClick {
+                                onTemporaryColorChange(!state.temporaryColor)
+                                true
+                            }
+                        } else disabled()
+                    },
+                )
+                val durations = FilterPreferences.COLOR_DURATIONS
+                val durationLabels = durations.map { stringResource(R.string.settings_color_seconds, it) }
+                val durationLabel = stringResource(R.string.settings_color_seconds, state.colorDurationSeconds)
+                OverlayDropdownPreference(
+                    title = stringResource(R.string.settings_color_duration_title),
+                    summary = stringResource(R.string.settings_color_duration_description),
+                    items = durationLabels,
+                    selectedIndex = durations.indexOf(state.colorDurationSeconds),
+                    enabled = temporaryEditable && state.temporaryColor,
+                    onSelectedIndexChange = { onColorDurationChange(durations[it]) },
+                    modifier = Modifier.testTag("icon-color-duration").semantics {
+                        stateDescription = durationLabel
                     },
                 )
             }

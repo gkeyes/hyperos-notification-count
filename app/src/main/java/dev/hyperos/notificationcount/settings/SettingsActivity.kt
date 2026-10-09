@@ -32,6 +32,8 @@ class SettingsActivity : ComponentActivity() {
                         state = state,
                         onFilterChange = store::setExcluded,
                         onIconColorChange = store::setIconColorEnabled,
+                        onTemporaryColorChange = store::setTemporaryColor,
+                        onColorDurationChange = store::setColorDurationSeconds,
                         onReset = store::reset,
                         onRetry = store::retry,
                         onBack = ::finish,

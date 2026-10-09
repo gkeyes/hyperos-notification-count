@@ -31,7 +31,7 @@ public final class NotificationArrivals {
         NotificationSnapshot newest = null;
         long newestOrder = Long.MIN_VALUE;
         for (NotificationSnapshot item : counted) {
-            long arrival = order.getOrDefault(item.key, 0L);
+            long arrival = arrivalOf(item);
             if (arrival > newestOrder) {
                 newest = item;
                 newestOrder = arrival;
@@ -40,8 +40,12 @@ public final class NotificationArrivals {
         return newest;
     }
 
+    public long arrivalOf(NotificationSnapshot item) {
+        return item == null ? 0 : order.getOrDefault(item.key, 0L);
+    }
+
     public void clear() {
         order.clear();
-        sequence = 0;
+        // Keep ordinals monotonic across pipeline replacement, so a highlight token cannot collide.
     }
 }

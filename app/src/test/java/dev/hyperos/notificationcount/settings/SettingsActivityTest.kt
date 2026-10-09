@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.Lifecycle
@@ -76,6 +77,34 @@ class SettingsActivityTest {
             persisted = application.getSharedPreferences("settings-test", Context.MODE_PRIVATE)
             assertTrue(persisted.edit().clear().commit())
         }
+    }
+
+    @Test
+    fun temporarySwitchAndDropdownOfferEveryDurationAndSurviveReopening() {
+        val color = composeRule.onNodeWithTag("icon-color-switch")
+        val temporary = composeRule.onNodeWithTag("temporary-color-switch")
+        val duration = composeRule.onNodeWithTag("icon-color-duration")
+        connectPersisted()
+        temporary.assertIsOff().assertIsNotEnabled()
+        duration.assertIsNotEnabled()
+        color.performScrollTo().performClick()
+        temporary.performScrollTo().assertIsEnabled().performClick().assertIsOn()
+        duration.assertIsEnabled()
+        for (seconds in listOf(1, 3, 5, 10, 15)) {
+            duration.performScrollTo().performClick()
+            composeRule.onNodeWithText(application.getString(R.string.settings_color_seconds, seconds))
+                .assertIsDisplayed().performClick()
+            assertEquals(seconds, composeRule.runOnIdle {
+                persisted.getInt(FilterPreferences.ICON_COLOR_DURATION, -1)
+            })
+        }
+        composeRule.runOnIdle { application.replaceSettingsStore().connect(Any()) { persisted } }
+        composeRule.activityRule.scenario.recreate()
+        temporary.performScrollTo().assertIsOn()
+        duration.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "15 秒"))
+        color.performScrollTo().performClick()
+        temporary.assertIsOn().assertIsNotEnabled()
+        duration.assertIsNotEnabled()
     }
 
     @Test

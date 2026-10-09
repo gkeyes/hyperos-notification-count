@@ -8,6 +8,11 @@
     <string name="settings_section_display">显示样式</string>
     <string name="settings_icon_color_title">跟随通知 App 图标颜色</string>
     <string name="settings_icon_color_description">默认关闭。开启后，圆圈和数字使用最新参与计数通知的 App 图标候选色，并适应深浅背景。取不到彩色时沿用系统黑白色。数字仍表示通知总数。</string>
+    <string name="settings_temporary_color_title">临时变色</string>
+    <string name="settings_temporary_color_description">默认关闭。开启后，变色仅持续所选时长，到期恢复系统当前的黑白色。新通知重新计时，同一条通知的进度更新不延长时长。</string>
+    <string name="settings_color_duration_title">变色持续时间</string>
+    <string name="settings_color_duration_description">默认 5 秒，修改后从当前通知重新计时。</string>
+    <string name="settings_color_seconds">%1$d 秒</string>
     <string name="settings_overlap">一条通知可能同时属于多类；命中任一已开启的开关就会被排除。建议每次只开一项，观察状态栏数字的变化，再决定组合。</string>
     <string name="settings_selected">已开启 %1$d 项过滤</string>
     <string name="settings_ready">设置已连接。变更会实时发送到同一空间的系统界面；首次更新模块仍需按平时的方式使新版生效。</string>

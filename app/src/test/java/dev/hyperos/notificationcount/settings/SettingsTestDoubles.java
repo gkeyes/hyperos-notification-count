@@ -79,7 +79,8 @@ final class SettingsTestDoubles {
             if (name.equals("edit")) return editor();
             if (name.equals("getAll")) return new LinkedHashMap<>(cache);
             if (name.equals("contains")) return cache.containsKey(arguments[0]);
-            if (name.equals("getInt")) intReads++;
+            // Count mask reads as load cycles, independently of the new duration setting.
+            if (name.equals("getInt") && FilterPreferences.EXCLUDED_MASK.equals(arguments[0])) intReads++;
             if (name.startsWith("get") && arguments != null && arguments.length == 2) {
                 return cache.getOrDefault(arguments[0], arguments[1]);
             }

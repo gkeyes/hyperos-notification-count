@@ -98,6 +98,7 @@ MIUIX_COMPONENTS = {
     "basic/TopAppBarKt": "TopAppBar",
     "basic/ButtonKt": "TextButton",
     "preference/SwitchPreferenceKt": "SwitchPreference",
+    "preference/OverlayDropdownPreferenceKt": "OverlayDropdownPreference",
     "theme/MiuixThemeKt": "MiuixTheme",
 }
 TEST_PACKAGES = (
@@ -392,6 +393,8 @@ def main():
         "settings_ui=miuix\nmiuix_version=0.9.4\n"
         "icon_color=optional-default-off\nicon_color_source=declared-app-icon-resource\n"
         "icon_color_sample=64x64\nicon_color_cache=64-users-and-packages\n"
+        "temporary_color=optional-default-off\ncolor_duration_seconds=1,3,5,10,15\n"
+        "color_duration_default_seconds=5\ncolor_expiry=one-shot-elapsed-realtime\n"
     )
     (outputs / "BUILD_RECEIPT.txt").write_text(receipt)
     print(f"Fixed signer verified; prepared {name}, SHA-256 {info['sha256']}")

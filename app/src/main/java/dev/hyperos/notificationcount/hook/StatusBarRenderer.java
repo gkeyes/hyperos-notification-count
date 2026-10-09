@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 
 import dev.hyperos.notificationcount.NotificationCountModule;
 import dev.hyperos.notificationcount.core.AppIconSource;
+import dev.hyperos.notificationcount.core.ColorHighlightController;
 import dev.hyperos.notificationcount.core.IconColorCoordinator;
 import dev.hyperos.notificationcount.core.ReadableIconColor;
 import dev.hyperos.notificationcount.render.AppIconColorLoader;
@@ -51,9 +52,16 @@ final class StatusBarRenderer {
     private final Method setMeasuredDimension;
     private int count;
     private boolean ready;
-    private AppIconSource colorSource;
     private Integer iconColor;
     private IconColorCoordinator colors;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private final ColorHighlightController highlight = new ColorHighlightController(
+            SystemClock::elapsedRealtime, new ColorHighlightController.Scheduler() {
+                @Override public void schedule(Runnable task, long delayMillis) {
+                    main.postDelayed(task, delayMillis);
+                }
+                @Override public void cancel(Runnable task) { main.removeCallbacks(task); }
+            }, source -> { if (colors != null) colors.select(source); });
 
     StatusBarRenderer(NotificationCountModule module, HostAccess access) throws Throwable {
         this.module = module;
@@ -92,7 +100,6 @@ final class StatusBarRenderer {
         if (colors == null) {
             Context application = view.getContext().getApplicationContext();
             Context host = application != null ? application : view.getContext();
-            Handler main = new Handler(Looper.getMainLooper());
             colors = new IconColorCoordinator(source -> AppIconColorLoader.load(host, source),
                     Executors.newSingleThreadExecutor(task -> {
                         Thread thread = new Thread(() -> {
@@ -104,7 +111,7 @@ final class StatusBarRenderer {
                         return thread;
                     }), main::post, SystemClock::elapsedRealtime, this::setIconColor);
         }
-        colors.select(colorSource);
+        colors.select(highlight.activeSource());
         view.requestLayout();
     }
 
@@ -118,9 +125,9 @@ final class StatusBarRenderer {
         }
     }
 
-    void setCount(int count, boolean ready, AppIconSource source) throws Throwable {
-        colorSource = ready ? source : null;
-        if (colors != null) colors.select(colorSource);
+    void setCount(int count, boolean ready, AppIconSource source, long arrival,
+            boolean colorEnabled, boolean temporary, int seconds) throws Throwable {
+        highlight.update(ready ? source : null, arrival, ready && colorEnabled, temporary, seconds);
         if (this.count == count && this.ready == ready) return;
         this.count = count;
         this.ready = ready;
@@ -133,8 +140,7 @@ final class StatusBarRenderer {
 
     void fallback() {
         ready = false;
-        colorSource = null;
-        if (colors != null) colors.select(null);
+        highlight.update(null, 0, false, false, 5);
         for (State state : new ArrayList<>(states.values())) {
             state.drawable.setCount(0);
             View view = state.view.get();
@@ -147,7 +153,7 @@ final class StatusBarRenderer {
     }
 
     private void setIconColor(Integer color) {
-        iconColor = color;
+        iconColor = highlight.activeSource() != null ? color : null;
         for (State state : new ArrayList<>(states.values())) {
             try { state.updateTint(); } catch (Throwable error) { state.disable(error); }
         }
@@ -262,10 +268,11 @@ final class StatusBarRenderer {
             ViewGroup current = view.get();
             if (current == null) return;
             int systemTint = (int) HostAccess.call(getTint, null, tintAreas, current, tint);
-            if (tintApplied && lastSystemTint == systemTint && Objects.equals(lastIconColor, iconColor)) return;
-            drawable.setTint(ReadableIconColor.forSystemTint(iconColor, systemTint));
+            Integer candidate = highlight.activeSource() != null ? iconColor : null;
+            if (tintApplied && lastSystemTint == systemTint && Objects.equals(lastIconColor, candidate)) return;
+            drawable.setTint(ReadableIconColor.forSystemTint(candidate, systemTint));
             lastSystemTint = systemTint;
-            lastIconColor = iconColor;
+            lastIconColor = candidate;
             tintApplied = true;
         }
 
@@ -372,6 +379,7 @@ final class StatusBarRenderer {
         @Override public void onViewDetachedFromWindow(View view) { detach(); }
 
         @Override public boolean onPreDraw() {
+            highlight.expireIfNeeded();
             // Also handles containers without native child icons (for example only folded entries).
             if (!drawable.isHealthy()) disable(new IllegalStateException("Drawable unavailable"));
             return true;

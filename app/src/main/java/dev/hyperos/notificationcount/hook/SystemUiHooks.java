@@ -41,7 +41,9 @@ public final class SystemUiHooks {
     // Framework listeners are weakly held. Keep this callback alive for the injected process.
     private final SharedPreferences.OnSharedPreferenceChangeListener filterListener = (preferences, key) -> {
         if (key == null || FilterPreferences.EXCLUDED_MASK.equals(key)
-                || FilterPreferences.ICON_COLOR_ENABLED.equals(key)) requestRefresh();
+                || FilterPreferences.ICON_COLOR_ENABLED.equals(key)
+                || FilterPreferences.ICON_COLOR_TEMPORARY.equals(key)
+                || FilterPreferences.ICON_COLOR_DURATION.equals(key)) requestRefresh();
     };
     private final List<XposedInterface.HookHandle> handles = new ArrayList<>();
     private final Class<?> pipelineType;
@@ -273,14 +275,18 @@ public final class SystemUiHooks {
         }
         List<NotificationSnapshot> counted = NotificationCounter.countedNotifications(snapshots, excludedMask);
         AppIconSource source = null;
+        long arrival = 0;
         if (colorEnabled) {
             arrivals.observe(snapshots);
             NotificationSnapshot newest = arrivals.newest(counted);
             if (newest != null && newest.packageName != null) {
                 source = new AppIconSource(newest.packageName, newest.userId);
+                arrival = arrivals.arrivalOf(newest);
             }
         } else arrivals.clear();
-        renderer.setCount(counted.size(), true, source);
+        renderer.setCount(counted.size(), true, source, arrival, colorEnabled,
+                FilterPreferences.readTemporaryColor(filterPreferences),
+                FilterPreferences.readColorDuration(filterPreferences));
     }
 
     private void fail(Throwable error) {
