@@ -244,6 +244,34 @@ class SettingsActivityTest {
     }
 
     @Test
+    fun badgeStyleSegmentsPersistAndColorOnlyStylesFollowTheColorSwitch() {
+        connectPersisted()
+        val weight = composeRule.onNodeWithTag("digit-weight")
+        weight.performScrollTo().assert(stateDescription(R.string.settings_digit_weight_normal))
+        composeRule.onNodeWithText(application.getString(R.string.settings_digit_weight_bold))
+            .performScrollTo().assertIsEnabled().performClick()
+        assertEquals(FilterPreferences.WEIGHT_BOLD, composeRule.runOnIdle {
+            persisted.getInt(FilterPreferences.DIGIT_WEIGHT, -1)
+        })
+        weight.assert(stateDescription(R.string.settings_digit_weight_bold))
+
+        val black = composeRule.onNodeWithText(application.getString(R.string.settings_digit_color_black))
+        black.performScrollTo().assertIsNotEnabled()
+        composeRule.onNodeWithTag("icon-color-switch").performScrollTo().performClick()
+        black.performScrollTo().assertIsEnabled().performClick()
+        assertEquals(FilterPreferences.DIGIT_COLOR_BLACK, composeRule.runOnIdle {
+            persisted.getInt(FilterPreferences.DIGIT_COLOR, -1)
+        })
+        composeRule.onNodeWithTag("digit-color").assert(stateDescription(R.string.settings_digit_color_black))
+        composeRule.onNodeWithText(application.getString(R.string.settings_badge_contrast_high))
+            .performScrollTo().performClick()
+        assertEquals(70, composeRule.runOnIdle { persisted.getInt(FilterPreferences.BADGE_CONTRAST, -1) })
+    }
+
+    private fun stateDescription(resource: Int) =
+        SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, application.getString(resource))
+
+    @Test
     fun livePreviewCyclesCountsFollowsColorModeAndNeverWritesSettings() {
         val preview = composeRule.onNodeWithTag("settings-preview")
         preview.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
