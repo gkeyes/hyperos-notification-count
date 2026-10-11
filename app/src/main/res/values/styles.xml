@@ -4,5 +4,7 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
+        <!-- Match the Miuix page background so there is no flash before Compose draws. -->
+        <item name="android:windowBackground">@color/settings_window_background</item>
     </style>
 </resources>

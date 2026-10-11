@@ -27,6 +27,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.lifecycle.Lifecycle
 import dev.hyperos.notificationcount.R
 import dev.hyperos.notificationcount.core.NotificationType
@@ -240,6 +242,41 @@ class SettingsActivityTest {
         assertMaskAndEnabled(NotificationType.FOCUS.bit, enabled = true)
         composeRule.runOnIdle { assertEquals(1, observerCount()) }
     }
+
+    @Test
+    fun livePreviewCyclesCountsFollowsColorModeAndNeverWritesSettings() {
+        val preview = composeRule.onNodeWithTag("settings-preview")
+        preview.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertContentDescriptionEquals(previewDescription(count = 3, mode = R.string.settings_preview_mono))
+        // 3 -> 9, then the overflow glyph, then wrap back to 1.
+        repeat(6) { preview.performSemanticsAction(SemanticsActions.OnClick) }
+        preview.assertContentDescriptionEquals(previewDescription(count = 9, mode = R.string.settings_preview_mono))
+        preview.performSemanticsAction(SemanticsActions.OnClick)
+        preview.assertContentDescriptionEquals(application.getString(
+            R.string.settings_preview_description,
+            application.getString(R.string.settings_preview_overflow),
+            application.getString(R.string.settings_preview_mono),
+        ))
+        preview.performSemanticsAction(SemanticsActions.OnClick)
+        preview.assertContentDescriptionEquals(previewDescription(count = 1, mode = R.string.settings_preview_mono))
+        assertTrue(composeRule.runOnIdle { persisted.all.isEmpty() })
+
+        connectPersisted()
+        composeRule.onNodeWithTag("icon-color-switch").performScrollTo().performClick()
+        preview.assertContentDescriptionEquals(previewDescription(count = 1, mode = R.string.settings_preview_app_color))
+        composeRule.onNodeWithTag("temporary-color-switch").performScrollTo().performClick()
+        preview.assertContentDescriptionEquals(application.getString(
+            R.string.settings_preview_description,
+            application.getString(R.string.settings_preview_count, 1),
+            application.getString(R.string.settings_preview_temporary, FilterPreferences.DEFAULT_COLOR_DURATION),
+        ))
+    }
+
+    private fun previewDescription(count: Int, mode: Int): String = application.getString(
+        R.string.settings_preview_description,
+        application.getString(R.string.settings_preview_count, count),
+        application.getString(mode),
+    )
 
     @Test
     fun manifestResolvesTheManagerSettingsCategoryWithoutALauncherEntry() {

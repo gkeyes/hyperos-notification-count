@@ -1,70 +1,67 @@
 package dev.hyperos.notificationcount.settings
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.semantics.toggleableState
-import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import dev.hyperos.notificationcount.BuildConfig
 import dev.hyperos.notificationcount.R
 import dev.hyperos.notificationcount.core.NotificationType
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Recent
+import top.yukonga.miuix.kmp.icon.extended.Report
+import top.yukonga.miuix.kmp.icon.extended.Show
+import top.yukonga.miuix.kmp.icon.extended.Stopwatch
+import top.yukonga.miuix.kmp.icon.extended.Theme
+import top.yukonga.miuix.kmp.icon.extended.Tune
 
-private data class FilterGroup(val title: Int, val types: List<NotificationType>)
+private const val SCREEN = "settings"
 
-private val filterGroups = listOf(
-    FilterGroup(R.string.settings_section_focus, listOf(
-        NotificationType.FOCUS, NotificationType.ISLAND_CONTENT,
-        NotificationType.UPDATABLE_FOCUS, NotificationType.PROMOTED_ONGOING,
-        NotificationType.REQUEST_PROMOTION,
-    )),
-    FilterGroup(R.string.settings_section_ongoing, listOf(
-        NotificationType.PERSISTENT, NotificationType.ONGOING_EVENT,
-        NotificationType.NO_CLEAR, NotificationType.FOREGROUND_SERVICE,
-        NotificationType.NOT_CLEARABLE,
-    )),
-    FilterGroup(R.string.settings_section_content, listOf(
-        NotificationType.HEADS_UP_PINNED, NotificationType.MEDIA, NotificationType.CALL,
-        NotificationType.SILENT, NotificationType.FOLDED,
-    )),
-)
-
+/**
+ * The module's only screen: live badge preview, connection state, display style and the
+ * three filter groups. Miuix large title collapses on scroll with a hairline fading in;
+ * content is edge-to-edge and scrolls behind the navigation bar.
+ */
 @Composable
 internal fun SettingsScreen(
     state: SettingsStore.State,
@@ -81,236 +78,354 @@ internal fun SettingsScreen(
 ) {
     val editable = state.status == SettingsStore.Status.READY
     val scrollBehavior = MiuixScrollBehavior()
+    val layoutDirection = LocalLayoutDirection.current
+    val family = Family.colors
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = stringResource(R.string.settings_title),
-                subtitle = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
-                navigationIcon = {
-                    IconButton(onClick = onBack, minWidth = 48.dp, minHeight = 48.dp) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = stringResource(R.string.settings_back),
-                            tint = MiuixTheme.colorScheme.onSurface,
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            Column {
+                TopAppBar(
+                    title = stringResource(R.string.settings_title),
+                    subtitle = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                    color = family.page,
+                    navigationIcon = {
+                        IconButton(onClick = onBack, minWidth = Dimens.minTouch, minHeight = Dimens.minTouch) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = stringResource(R.string.settings_back),
+                                tint = textPrimary,
+                            )
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+                // Hairline appears as the large title collapses (read in the draw phase).
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(Dimens.hairline)
+                        .graphicsLayer { alpha = scrollBehavior.state.collapsedFraction }
+                        .background(family.hairline),
+                )
+            }
         },
     ) { insets ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(insets)
+                .padding(
+                    start = insets.calculateStartPadding(layoutDirection),
+                    top = insets.calculateTopPadding(),
+                    end = insets.calculateEndPadding(layoutDirection),
+                )
                 .consumeWindowInsets(insets)
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
                 .testTag("settings-scroll")
-                .padding(top = 12.dp, bottom = 24.dp),
+                .padding(top = Spacing.sm),
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                insideMargin = PaddingValues(16.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_intro),
-                    style = MiuixTheme.textStyles.body1,
-                )
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = stringResource(R.string.settings_overlap),
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                insideMargin = PaddingValues(16.dp),
-            ) {
-                Text(
-                    text = stringResource(statusLabel(state.status)),
-                    modifier = Modifier.testTag("settings-status").semantics {
-                        liveRegion = LiveRegionMode.Polite
-                    },
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.settings_selected, Integer.bitCount(state.mask)),
-                    modifier = Modifier.testTag("settings-selected"),
-                    style = MiuixTheme.textStyles.body1,
+            var block = 0
+
+            CountBadgePreview(
+                settings = BadgePreviewSettings(
+                    iconColorEnabled = state.iconColorEnabled,
+                    temporaryColor = state.temporaryColor,
+                    durationSeconds = state.colorDurationSeconds,
+                    digitColor = state.digitColor,
+                    badgeContrast = state.badgeContrast,
+                    digitWeight = state.digitWeight,
+                ),
+                modifier = Modifier.padding(horizontal = Spacing.gutter).staggeredEntrance(SCREEN, block++),
+            )
+            Spacer(Modifier.height(Spacing.sm))
+            ConnectionCard(
+                status = state.status,
+                enabledFilters = Integer.bitCount(state.mask),
+                onRetry = onRetry,
+                modifier = Modifier.staggeredEntrance(SCREEN, block++),
+            )
+            Spacer(Modifier.height(Spacing.sm))
+            Footnote(
+                text = stringResource(R.string.settings_intro),
+                modifier = Modifier.staggeredEntrance(SCREEN, block++),
+            )
+
+            Column(Modifier.staggeredEntrance(SCREEN, block++)) {
+                SectionHeader(title = stringResource(R.string.settings_section_display))
+                DisplaySection(
+                    state, editable, onIconColorChange, onTemporaryColorChange, onColorDurationChange,
+                    onDigitColorChange, onBadgeContrastChange, onDigitWeightChange,
                 )
             }
-            Spacer(Modifier.height(16.dp))
-            SmallTitle(text = stringResource(R.string.settings_section_display))
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                val title = stringResource(R.string.settings_icon_color_title)
-                val description = stringResource(R.string.settings_icon_color_description)
-                SwitchPreference(
-                    title = title,
-                    summary = description,
-                    checked = state.iconColorEnabled,
-                    enabled = editable,
-                    onCheckedChange = onIconColorChange,
-                    modifier = Modifier.testTag("icon-color-switch").clearAndSetSemantics {
-                        contentDescription = "$title。$description"
-                        role = Role.Switch
-                        toggleableState = if (state.iconColorEnabled) ToggleableState.On else ToggleableState.Off
-                        if (editable) {
-                            onClick {
-                                onIconColorChange(!state.iconColorEnabled)
-                                true
-                            }
-                        } else disabled()
-                    },
-                )
-                val temporaryTitle = stringResource(R.string.settings_temporary_color_title)
-                val temporaryDescription = stringResource(R.string.settings_temporary_color_description)
-                val temporaryEditable = editable && state.iconColorEnabled
-                SwitchPreference(
-                    title = temporaryTitle,
-                    summary = temporaryDescription,
-                    checked = state.temporaryColor,
-                    enabled = temporaryEditable,
-                    onCheckedChange = onTemporaryColorChange,
-                    modifier = Modifier.testTag("temporary-color-switch").clearAndSetSemantics {
-                        contentDescription = "$temporaryTitle。$temporaryDescription"
-                        role = Role.Switch
-                        toggleableState = if (state.temporaryColor) ToggleableState.On else ToggleableState.Off
-                        if (temporaryEditable) {
-                            onClick {
-                                onTemporaryColorChange(!state.temporaryColor)
-                                true
-                            }
-                        } else disabled()
-                    },
-                )
-                val durations = FilterPreferences.COLOR_DURATIONS
-                val durationLabels = durations.map { stringResource(R.string.settings_color_seconds, it) }
-                val durationLabel = stringResource(R.string.settings_color_seconds, state.colorDurationSeconds)
-                val durationEditable = temporaryEditable && state.temporaryColor
-                OverlayDropdownPreference(
-                    title = stringResource(R.string.settings_color_duration_title),
-                    summary = stringResource(R.string.settings_color_duration_description),
-                    items = durationLabels,
-                    selectedIndex = durations.indexOf(state.colorDurationSeconds),
-                    enabled = durationEditable,
-                    onSelectedIndexChange = { onColorDurationChange(durations[it]) },
-                    modifier = Modifier.testTag("icon-color-duration").semantics {
-                        stateDescription = durationLabel
-                        // Miuix removes the click handler while disabled; expose that state to accessibility.
-                        if (!durationEditable) disabled()
-                    },
-                )
-                val colorStyleEditable = editable && state.iconColorEnabled
-                StyleDropdown(
-                    title = stringResource(R.string.settings_digit_color_title),
-                    summary = stringResource(R.string.settings_digit_color_description),
-                    labels = listOf(
-                        stringResource(R.string.settings_digit_color_auto),
-                        stringResource(R.string.settings_digit_color_white),
-                        stringResource(R.string.settings_digit_color_black),
-                        stringResource(R.string.settings_digit_color_transparent),
-                    ),
-                    values = FilterPreferences.DIGIT_COLORS,
-                    selected = state.digitColor,
-                    enabled = colorStyleEditable,
-                    tag = "digit-color",
-                    onChange = onDigitColorChange,
-                )
-                StyleDropdown(
-                    title = stringResource(R.string.settings_badge_contrast_title),
-                    summary = stringResource(R.string.settings_badge_contrast_description),
-                    labels = listOf(
-                        stringResource(R.string.settings_badge_contrast_soft),
-                        stringResource(R.string.settings_badge_contrast_standard),
-                        stringResource(R.string.settings_badge_contrast_high),
-                    ),
-                    values = FilterPreferences.BADGE_CONTRASTS,
-                    selected = state.badgeContrast,
-                    enabled = colorStyleEditable,
-                    tag = "badge-contrast",
-                    onChange = onBadgeContrastChange,
-                )
-                StyleDropdown(
-                    title = stringResource(R.string.settings_digit_weight_title),
-                    summary = stringResource(R.string.settings_digit_weight_description),
-                    labels = listOf(
-                        stringResource(R.string.settings_digit_weight_normal),
-                        stringResource(R.string.settings_digit_weight_medium),
-                        stringResource(R.string.settings_digit_weight_bold),
-                    ),
-                    values = FilterPreferences.DIGIT_WEIGHTS,
-                    selected = state.digitWeight,
-                    enabled = editable,
-                    tag = "digit-weight",
-                    onChange = onDigitWeightChange,
-                )
-            }
-            filterGroups.forEach { group ->
-                Spacer(Modifier.height(16.dp))
-                SmallTitle(text = stringResource(group.title))
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                    group.types.forEach { type ->
-                        val (titleId, descriptionId) = filterLabels(type)
-                        val title = stringResource(titleId)
-                        val description = stringResource(descriptionId)
-                        val checked = state.mask and type.bit != 0
-                        SwitchPreference(
-                            title = title,
-                            summary = description,
-                            checked = checked,
-                            enabled = editable,
-                            onCheckedChange = { onFilterChange(type, it) },
-                            modifier = Modifier.testTag("filter-${type.key}")
-                                .clearAndSetSemantics {
-                                    // The library handles row/toggle touch input. Expose one
-                                    // accessible switch instead of two separate click targets.
-                                    contentDescription = "$title。$description"
-                                    role = Role.Switch
-                                    toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
-                                    if (editable) {
-                                        onClick {
-                                            onFilterChange(type, !checked)
-                                            true
-                                        }
-                                    } else {
-                                        disabled()
-                                    }
-                                },
+
+            filterGroups.forEachIndexed { index, group ->
+                Column(Modifier.staggeredEntrance(SCREEN, block++)) {
+                    SectionHeader(
+                        title = stringResource(group.title),
+                        enabled = group.enabledCount(state.mask),
+                        total = group.types.size,
+                    )
+                    if (index == 0) {
+                        Footnote(
+                            text = stringResource(R.string.settings_overlap),
+                            modifier = Modifier.padding(bottom = Spacing.xs),
                         )
                     }
+                    FilterSection(group, state.mask, editable, onFilterChange)
                 }
             }
-            Spacer(Modifier.height(24.dp))
-            TextButton(
+
+            Spacer(Modifier.height(Spacing.lg))
+            FamilyButton(
                 text = stringResource(R.string.settings_reset),
                 onClick = onReset,
                 enabled = editable && state.mask != 0,
-                minHeight = 48.dp,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
-                    .testTag("settings-reset"),
+                testTag = "settings-reset",
+                kind = ButtonKind.DESTRUCTIVE,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter),
             )
-            if (state.status != SettingsStore.Status.READY && state.status != SettingsStore.Status.SAVING) {
-                Spacer(Modifier.height(8.dp))
-                TextButton(
-                    text = stringResource(R.string.settings_retry),
-                    onClick = onRetry,
-                    enabled = state.status != SettingsStore.Status.CONNECTING,
-                    minHeight = 48.dp,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
-                        .testTag("settings-retry"),
-                )
-            }
+            Spacer(Modifier.height(Spacing.lg + insets.calculateBottomPadding()))
         }
     }
 }
 
+/* ---------- Connection ---------- */
+
+private enum class StatusKind { SUCCESS, PROGRESS, WAITING, ERROR }
+
+private fun SettingsStore.Status.kind(): StatusKind = when (this) {
+    SettingsStore.Status.READY -> StatusKind.SUCCESS
+    SettingsStore.Status.CONNECTING, SettingsStore.Status.SAVING -> StatusKind.PROGRESS
+    SettingsStore.Status.WAITING -> StatusKind.WAITING
+    SettingsStore.Status.UNAVAILABLE, SettingsStore.Status.SAVE_FAILED -> StatusKind.ERROR
+}
+
+/** Connected (ready / saving) shows a compact banner; anything else a centred state block. */
+private fun SettingsStore.Status.isSettled(): Boolean =
+    this == SettingsStore.Status.READY || this == SettingsStore.Status.SAVING
+
+internal fun statusLabel(status: SettingsStore.Status): Int = when (status) {
+    SettingsStore.Status.WAITING -> R.string.settings_waiting
+    SettingsStore.Status.CONNECTING -> R.string.settings_connecting
+    SettingsStore.Status.READY -> R.string.settings_ready
+    SettingsStore.Status.SAVING -> R.string.settings_saving
+    SettingsStore.Status.UNAVAILABLE -> R.string.settings_unavailable
+    SettingsStore.Status.SAVE_FAILED -> R.string.settings_save_failed
+}
+
+private fun stateTitle(status: SettingsStore.Status): Int = when (status) {
+    SettingsStore.Status.CONNECTING -> R.string.settings_state_connecting
+    SettingsStore.Status.UNAVAILABLE -> R.string.settings_state_unavailable
+    SettingsStore.Status.SAVE_FAILED -> R.string.settings_state_save_failed
+    else -> R.string.settings_state_waiting
+}
+
 @Composable
-private fun StyleDropdown(
+private fun StatusKind.tone(): Tone {
+    val family = Family.colors
+    return when (this) {
+        StatusKind.SUCCESS -> family.success
+        StatusKind.PROGRESS -> family.info
+        StatusKind.WAITING -> family.warning
+        StatusKind.ERROR -> family.danger
+    }
+}
+
+private fun StatusKind.icon(): ImageVector = when (this) {
+    StatusKind.SUCCESS -> MiuixIcons.Ok
+    StatusKind.PROGRESS -> MiuixIcons.Recent
+    StatusKind.WAITING -> MiuixIcons.Info
+    StatusKind.ERROR -> MiuixIcons.Report
+}
+
+@Composable
+private fun ConnectionCard(
+    status: SettingsStore.Status,
+    enabledFilters: Int,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val reduce = reduceMotion
+    GroupCard(modifier = modifier, padded = true) {
+        AnimatedContent(
+            targetState = status.isSettled(),
+            transitionSpec = { Motion.fadeThrough(reduce) },
+            label = "connectionLayout",
+        ) { settled ->
+            if (settled) {
+                StatusBanner(status)
+            } else {
+                val kind = status.kind()
+                StateBlock(
+                    icon = kind.icon(),
+                    tone = kind.tone(),
+                    title = stringResource(stateTitle(status)),
+                    message = { StatusText(status, TextAlign.Center) },
+                    action = {
+                        FamilyButton(
+                            text = stringResource(R.string.settings_retry),
+                            onClick = onRetry,
+                            enabled = status != SettingsStore.Status.CONNECTING,
+                            testTag = "settings-retry",
+                            kind = ButtonKind.PRIMARY,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    },
+                    modifier = Modifier.padding(vertical = Spacing.xs),
+                )
+            }
+        }
+        Spacer(Modifier.height(Spacing.sm))
+        Text(
+            text = stringResource(R.string.settings_selected, enabledFilters),
+            modifier = Modifier.fillMaxWidth().testTag("settings-selected"),
+            style = TypeRole.caption.tabular(),
+            color = textSecondary,
+            textAlign = if (status.isSettled()) TextAlign.Start else TextAlign.Center,
+        )
+    }
+}
+
+/** Compact connected state: tonal status icon + status text, both fading through on change. */
+@Composable
+private fun StatusBanner(status: SettingsStore.Status) {
+    val reduce = reduceMotion
+    val kind = status.kind()
+    val tone = kind.tone()
+    val container = animateColorAsState(tone.container, Motion.effects(reduce), label = "bannerContainer")
+    val content = animateColorAsState(tone.content, Motion.effects(reduce), label = "bannerContent")
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(Dimens.leadingIcon).clip(CircleShape).drawBehind { drawRect(container.value) },
+            contentAlignment = Alignment.Center,
+        ) {
+            AnimatedContent(targetState = kind, transitionSpec = { Motion.fadeThrough(reduce) }, label = "bannerIcon") {
+                Icon(
+                    imageVector = it.icon(),
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.leadingGlyph),
+                    tint = content.value,
+                )
+            }
+        }
+        Spacer(Modifier.width(Spacing.sm))
+        Box(Modifier.weight(1f)) { StatusText(status, TextAlign.Start) }
+    }
+}
+
+@Composable
+private fun StatusText(status: SettingsStore.Status, align: TextAlign) {
+    val reduce = reduceMotion
+    AnimatedContent(targetState = status, transitionSpec = { Motion.fadeThrough(reduce) }, label = "statusText") {
+        Text(
+            text = stringResource(statusLabel(it)),
+            modifier = Modifier.fillMaxWidth().testTag("settings-status").semantics {
+                liveRegion = LiveRegionMode.Polite
+            },
+            style = TypeRole.subhead,
+            color = textSecondary,
+            textAlign = align,
+        )
+    }
+}
+
+/* ---------- Display style ---------- */
+
+@Composable
+private fun DisplaySection(
+    state: SettingsStore.State,
+    editable: Boolean,
+    onIconColorChange: (Boolean) -> Unit,
+    onTemporaryColorChange: (Boolean) -> Unit,
+    onColorDurationChange: (Int) -> Unit,
+    onDigitColorChange: (Int) -> Unit,
+    onBadgeContrastChange: (Int) -> Unit,
+    onDigitWeightChange: (Int) -> Unit,
+) {
+    GroupCard {
+        SwitchRow(
+            icon = MiuixIcons.Theme,
+            title = stringResource(R.string.settings_icon_color_title),
+            summary = stringResource(R.string.settings_icon_color_description),
+            checked = state.iconColorEnabled,
+            enabled = editable,
+            onCheckedChange = onIconColorChange,
+            testTag = "icon-color-switch",
+        )
+        val temporaryEditable = editable && state.iconColorEnabled
+        SwitchRow(
+            icon = MiuixIcons.Recent,
+            title = stringResource(R.string.settings_temporary_color_title),
+            summary = stringResource(R.string.settings_temporary_color_description),
+            checked = state.temporaryColor,
+            enabled = temporaryEditable,
+            onCheckedChange = onTemporaryColorChange,
+            testTag = "temporary-color-switch",
+        )
+        val durations = FilterPreferences.COLOR_DURATIONS
+        DropdownRow(
+            icon = MiuixIcons.Stopwatch,
+            title = stringResource(R.string.settings_color_duration_title),
+            summary = stringResource(R.string.settings_color_duration_description),
+            labels = durations.map { stringResource(R.string.settings_color_seconds, it) },
+            selectedIndex = durations.indexOf(state.colorDurationSeconds),
+            enabled = temporaryEditable && state.temporaryColor,
+            testTag = "icon-color-duration",
+            onSelect = { onColorDurationChange(durations[it]) },
+        )
+        val colorStyleEditable = editable && state.iconColorEnabled
+        StyleRow(
+            icon = MiuixIcons.Edit,
+            title = stringResource(R.string.settings_digit_color_title),
+            summary = stringResource(R.string.settings_digit_color_description),
+            labels = listOf(
+                stringResource(R.string.settings_digit_color_auto),
+                stringResource(R.string.settings_digit_color_white),
+                stringResource(R.string.settings_digit_color_black),
+                stringResource(R.string.settings_digit_color_transparent),
+            ),
+            values = FilterPreferences.DIGIT_COLORS,
+            selected = state.digitColor,
+            enabled = colorStyleEditable,
+            tag = "digit-color",
+            onChange = onDigitColorChange,
+        )
+        StyleRow(
+            icon = MiuixIcons.Show,
+            title = stringResource(R.string.settings_badge_contrast_title),
+            summary = stringResource(R.string.settings_badge_contrast_description),
+            labels = listOf(
+                stringResource(R.string.settings_badge_contrast_soft),
+                stringResource(R.string.settings_badge_contrast_standard),
+                stringResource(R.string.settings_badge_contrast_high),
+            ),
+            values = FilterPreferences.BADGE_CONTRASTS,
+            selected = state.badgeContrast,
+            enabled = colorStyleEditable,
+            tag = "badge-contrast",
+            onChange = onBadgeContrastChange,
+        )
+        StyleRow(
+            icon = MiuixIcons.Tune,
+            title = stringResource(R.string.settings_digit_weight_title),
+            summary = stringResource(R.string.settings_digit_weight_description),
+            labels = listOf(
+                stringResource(R.string.settings_digit_weight_normal),
+                stringResource(R.string.settings_digit_weight_medium),
+                stringResource(R.string.settings_digit_weight_bold),
+            ),
+            values = FilterPreferences.DIGIT_WEIGHTS,
+            selected = state.digitWeight,
+            enabled = editable,
+            tag = "digit-weight",
+            onChange = onDigitWeightChange,
+        )
+    }
+}
+
+/** Short exclusive badge style choice as a segmented control. */
+@Composable
+private fun StyleRow(
+    icon: ImageVector,
     title: String,
     summary: String,
     labels: List<String>,
@@ -320,46 +435,39 @@ private fun StyleDropdown(
     tag: String,
     onChange: (Int) -> Unit,
 ) {
-    val index = values.indexOf(selected).coerceAtLeast(0)
-    val label = labels[index]
-    OverlayDropdownPreference(
+    SegmentedRow(
+        icon = icon,
         title = title,
         summary = summary,
-        items = labels,
-        selectedIndex = index,
+        labels = labels,
+        selectedIndex = values.indexOf(selected).coerceAtLeast(0),
         enabled = enabled,
-        onSelectedIndexChange = { onChange(values[it]) },
-        modifier = Modifier.testTag(tag).semantics {
-            stateDescription = label
-            // Miuix removes the click handler while disabled; expose that state to accessibility.
-            if (!enabled) disabled()
-        },
+        testTag = tag,
+        onSelect = { onChange(values[it]) },
     )
 }
 
-private fun statusLabel(status: SettingsStore.Status): Int = when (status) {
-    SettingsStore.Status.WAITING -> R.string.settings_waiting
-    SettingsStore.Status.CONNECTING -> R.string.settings_connecting
-    SettingsStore.Status.READY -> R.string.settings_ready
-    SettingsStore.Status.SAVING -> R.string.settings_saving
-    SettingsStore.Status.UNAVAILABLE -> R.string.settings_unavailable
-    SettingsStore.Status.SAVE_FAILED -> R.string.settings_save_failed
-}
+/* ---------- Filters ---------- */
 
-internal fun filterLabels(type: NotificationType): Pair<Int, Int> = when (type) {
-    NotificationType.FOCUS -> R.string.filter_focus_title to R.string.filter_focus_description
-    NotificationType.ISLAND_CONTENT -> R.string.filter_island_title to R.string.filter_island_description
-    NotificationType.UPDATABLE_FOCUS -> R.string.filter_updatable_title to R.string.filter_updatable_description
-    NotificationType.PROMOTED_ONGOING -> R.string.filter_promoted_title to R.string.filter_promoted_description
-    NotificationType.REQUEST_PROMOTION -> R.string.filter_request_title to R.string.filter_request_description
-    NotificationType.PERSISTENT -> R.string.filter_persistent_title to R.string.filter_persistent_description
-    NotificationType.ONGOING_EVENT -> R.string.filter_ongoing_title to R.string.filter_ongoing_description
-    NotificationType.NO_CLEAR -> R.string.filter_no_clear_title to R.string.filter_no_clear_description
-    NotificationType.FOREGROUND_SERVICE -> R.string.filter_foreground_title to R.string.filter_foreground_description
-    NotificationType.NOT_CLEARABLE -> R.string.filter_not_clearable_title to R.string.filter_not_clearable_description
-    NotificationType.HEADS_UP_PINNED -> R.string.filter_pinned_title to R.string.filter_pinned_description
-    NotificationType.MEDIA -> R.string.filter_media_title to R.string.filter_media_description
-    NotificationType.CALL -> R.string.filter_call_title to R.string.filter_call_description
-    NotificationType.SILENT -> R.string.filter_silent_title to R.string.filter_silent_description
-    NotificationType.FOLDED -> R.string.filter_folded_title to R.string.filter_folded_description
+@Composable
+private fun FilterSection(
+    group: FilterGroup,
+    mask: Int,
+    editable: Boolean,
+    onFilterChange: (NotificationType, Boolean) -> Unit,
+) {
+    GroupCard {
+        group.types.forEach { type ->
+            val (titleId, descriptionId) = filterLabels(type)
+            SwitchRow(
+                icon = filterIcon(type),
+                title = stringResource(titleId),
+                summary = stringResource(descriptionId),
+                checked = mask and type.bit != 0,
+                enabled = editable,
+                onCheckedChange = { onFilterChange(type, it) },
+                testTag = "filter-${type.key}",
+            )
+        }
+    }
 }

@@ -6,12 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import java.util.function.Consumer
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.ThemeController
 
 /** Only the module manager exposes this activity; the manifest has no launcher category. */
 class SettingsActivity : ComponentActivity() {
@@ -25,8 +21,7 @@ class SettingsActivity : ComponentActivity() {
         store = (application as ModuleApplication).settingsStore
         screenState = store.state()
         setContent {
-            val theme = remember { ThemeController(ColorSchemeMode.System) }
-            MiuixTheme(controller = theme) {
+            NotificationCountTheme {
                 screenState?.let { state ->
                     SettingsScreen(
                         state = state,
