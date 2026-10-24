@@ -65,7 +65,7 @@ public class BadgeStyleTest {
         }
     }
 
-    @Test public void boostedDigitsBeatBlackOrWhiteWhileTheBadgeKeepsItsBarContrast() {
+    @Test public void boostedDigitsBeatBlackOrWhiteAndKeepTheBadgeColored() {
         int[] sources = {0xff3c874a, 0xff07c160, 0xfff44336, 0xff2196f3, 0xff009688, 0xffffeb3b, 0xffff00ff, 0xff777777};
         for (int tenths : FilterPreferences.BADGE_CONTRASTS) {
             for (int tint : new int[]{0xffffffff, 0xff000000}) {
@@ -80,17 +80,25 @@ public class BadgeStyleTest {
                     double boosted = ReadableIconColor.lightnessContrast(boostDigit, boostBadge);
                     assertTrue(boosted >= ReadableIconColor.BOOST_LC);
                     assertTrue(boosted >= ReadableIconColor.lightnessContrast(plainDigit, plainBadge));
-                    assertTrue(ReadableIconColor.contrast(boostBadge, bar) >= tenths / 10.0);
                     assertTrue(boostDigit == 0xffffffff || boostDigit == 0xff000000);
+                    // Light bar: darkening only adds contrast. Dark bar: never washed out to near
+                    // white; a badge is either left alone or darkened under a white digit.
+                    if (bar == 0xffffffff) assertTrue(ReadableIconColor.contrast(boostBadge, bar) >= tenths / 10.0);
+                    else assertTrue(boostBadge == plainBadge || boostDigit == 0xffffffff);
                 }
             }
         }
-        // The screenshot green on a light bar turns darker green under a white digit.
-        int green = new BadgeStyle(0, 45, 0, BOOST).badgeColor(0xff3c874a, 0xff000000);
-        assertEquals(0xffffffff, (int) new BadgeStyle(0, 45, 0, BOOST).glyphColor(1, green));
-        assertTrue(((green >>> 8) & 255) > ((green >>> 16) & 255));
+        // The screenshot green turns darker green under a white digit on either bar.
+        for (int tint : new int[]{0xffffffff, 0xff000000}) {
+            int green = new BadgeStyle(0, 45, 0, BOOST).badgeColor(0xff3c874a, tint);
+            assertEquals(0xffffffff, (int) new BadgeStyle(0, 45, 0, BOOST).glyphColor(1, green));
+            int r = (green >>> 16) & 255, g = (green >>> 8) & 255, b = green & 255;
+            assertTrue(g > r + 30 && g > b + 30);
+        }
+        // A light badge that already reads well with black stays as it is on a dark bar.
+        assertEquals(0xffffeb3b, new BadgeStyle(0, 45, 0, BOOST).badgeColor(0xffffeb3b, 0xffffffff));
         // Badge alpha is kept, and forced digit colors leave the badge untouched.
-        assertEquals(0x80, ReadableIconColor.boostedForDigits(0x803c874a, 0xff000000, 4.5, 90) >>> 24);
+        assertEquals(0x80, ReadableIconColor.boostedForDigits(0x803c874a, 90) >>> 24);
         assertEquals(new BadgeStyle(FilterPreferences.DIGIT_COLOR_WHITE, 45, 0, MAX).badgeColor(0xff3c874a, 0xff000000),
                 new BadgeStyle(FilterPreferences.DIGIT_COLOR_WHITE, 45, 0, BOOST).badgeColor(0xff3c874a, 0xff000000));
         assertEquals(0xffffffff, new BadgeStyle(0, 45, 0, BOOST).badgeColor(null, 0xffffffff));

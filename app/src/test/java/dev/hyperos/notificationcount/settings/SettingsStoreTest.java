@@ -91,6 +91,11 @@ public class SettingsStoreTest {
         assertEquals(FilterPreferences.DIGIT_CONTRAST_HUE, FilterPreferences.normalizeDigitContrast(60));
         assertEquals(FilterPreferences.DIGIT_CONTRAST_HUE, FilterPreferences.normalizeDigitContrast(75));
         assertEquals(FilterPreferences.DIGIT_CONTRAST_BLACK_WHITE, FilterPreferences.normalizeDigitContrast(0));
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_BLACK_WHITE, FilterPreferences.normalizeDigitContrast(4));
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_BLACK_WHITE, FilterPreferences.normalizeDigitContrast(-1));
+        for (int mode : FilterPreferences.DIGIT_CONTRASTS) {
+            assertEquals(mode, FilterPreferences.normalizeDigitContrast(mode));
+        }
     }
 
     @Test public void failedStyleSaveRestoresEveryConfirmedOption() {

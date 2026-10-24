@@ -56,6 +56,20 @@ public class ReadableIconColorTest {
         assertEquals(0xffffffff, ReadableIconColor.glyphOn(0xff3c874a));
     }
 
+    @Test public void lightnessContrastMatchesTheApcaReferenceValues() {
+        // apca-w3 0.0.98G reference pairs (text, background, signed Lc); we report |Lc|.
+        Object[][] pairs = {
+                {0xff888888, 0xffffffff, 63.056}, {0xffffffff, 0xff888888, 68.541},
+                {0xff000000, 0xffaaaaaa, 58.146}, {0xffaaaaaa, 0xff000000, 56.241},
+                {0xff112233, 0xffddeeff, 91.668}, {0xffddeeff, 0xff112233, 93.068},
+                {0xff000000, 0xffffffff, 106.04}, {0xffffffff, 0xff000000, 107.88},
+        };
+        for (Object[] pair : pairs) {
+            assertEquals((double) pair[2],
+                    ReadableIconColor.lightnessContrast((int) pair[0], (int) pair[1]), 0.01);
+        }
+    }
+
     @Test public void tintedDigitsReachTheTargetOrFallBackToBlackOrWhite() {
         for (int r = 0; r <= 255; r += 51) for (int g = 0; g <= 255; g += 51) for (int b = 0; b <= 255; b += 51) {
             int badge = 0xff000000 | (r << 16) | (g << 8) | b;
