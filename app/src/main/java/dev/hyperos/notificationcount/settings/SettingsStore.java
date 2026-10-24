@@ -22,6 +22,7 @@ public final class SettingsStore {
         public final int digitColor;
         public final int badgeContrast;
         public final int digitWeight;
+        public final int digitContrast;
         public final Status status;
 
         State(int mask, Status status) {
@@ -36,12 +37,13 @@ public final class SettingsStore {
             this.digitColor = values.digitColor;
             this.badgeContrast = values.contrast;
             this.digitWeight = values.weight;
+            this.digitContrast = values.digitContrast;
             this.status = status;
         }
 
         Values values() {
             return new Values(mask, iconColorEnabled, temporaryColor, colorDurationSeconds,
-                    digitColor, badgeContrast, digitWeight);
+                    digitColor, badgeContrast, digitWeight, digitContrast);
         }
     }
 
@@ -49,7 +51,8 @@ public final class SettingsStore {
     static final class Values {
         static final Values DEFAULT = new Values(0, false, false,
                 FilterPreferences.DEFAULT_COLOR_DURATION, FilterPreferences.DIGIT_COLOR_AUTO,
-                FilterPreferences.DEFAULT_BADGE_CONTRAST, FilterPreferences.WEIGHT_NORMAL);
+                FilterPreferences.DEFAULT_BADGE_CONTRAST, FilterPreferences.WEIGHT_NORMAL,
+                FilterPreferences.DEFAULT_DIGIT_CONTRAST);
 
         final int mask;
         final boolean color;
@@ -58,9 +61,10 @@ public final class SettingsStore {
         final int digitColor;
         final int contrast;
         final int weight;
+        final int digitContrast;
 
         Values(int mask, boolean color, boolean temporary, int duration,
-                int digitColor, int contrast, int weight) {
+                int digitColor, int contrast, int weight, int digitContrast) {
             this.mask = mask & FilterPreferences.KNOWN_MASK;
             this.color = color;
             this.temporary = temporary;
@@ -68,6 +72,7 @@ public final class SettingsStore {
             this.digitColor = FilterPreferences.normalizeDigitColor(digitColor);
             this.contrast = FilterPreferences.normalizeBadgeContrast(contrast);
             this.weight = FilterPreferences.normalizeDigitWeight(weight);
+            this.digitContrast = FilterPreferences.normalizeDigitContrast(digitContrast);
         }
 
         static Values read(SharedPreferences preferences) {
@@ -77,7 +82,8 @@ public final class SettingsStore {
                     FilterPreferences.readColorDuration(preferences),
                     FilterPreferences.readDigitColor(preferences),
                     FilterPreferences.readBadgeContrast(preferences),
-                    FilterPreferences.readDigitWeight(preferences));
+                    FilterPreferences.readDigitWeight(preferences),
+                    FilterPreferences.readDigitContrast(preferences));
         }
 
         boolean write(SharedPreferences target) {
@@ -87,17 +93,19 @@ public final class SettingsStore {
                     .putInt(FilterPreferences.ICON_COLOR_DURATION, duration)
                     .putInt(FilterPreferences.DIGIT_COLOR, digitColor)
                     .putInt(FilterPreferences.BADGE_CONTRAST, contrast)
-                    .putInt(FilterPreferences.DIGIT_WEIGHT, weight).commit();
+                    .putInt(FilterPreferences.DIGIT_WEIGHT, weight)
+                    .putInt(FilterPreferences.DIGIT_CONTRAST, digitContrast).commit();
         }
 
         Values withMask(int value) {
-            return new Values(value, color, temporary, duration, digitColor, contrast, weight);
+            return new Values(value, color, temporary, duration, digitColor, contrast, weight, digitContrast);
         }
 
         boolean sameAs(Values other) {
             return mask == other.mask && color == other.color && temporary == other.temporary
                     && duration == other.duration && digitColor == other.digitColor
-                    && contrast == other.contrast && weight == other.weight;
+                    && contrast == other.contrast && weight == other.weight
+                    && digitContrast == other.digitContrast;
         }
     }
 
@@ -191,32 +199,37 @@ public final class SettingsStore {
 
     public void setIconColorEnabled(boolean enabled) {
         Values v = state.values();
-        setValues(new Values(v.mask, enabled, v.temporary, v.duration, v.digitColor, v.contrast, v.weight));
+        setValues(new Values(v.mask, enabled, v.temporary, v.duration, v.digitColor, v.contrast, v.weight, v.digitContrast));
     }
 
     public void setTemporaryColor(boolean temporary) {
         Values v = state.values();
-        setValues(new Values(v.mask, v.color, temporary, v.duration, v.digitColor, v.contrast, v.weight));
+        setValues(new Values(v.mask, v.color, temporary, v.duration, v.digitColor, v.contrast, v.weight, v.digitContrast));
     }
 
     public void setColorDurationSeconds(int seconds) {
         Values v = state.values();
-        setValues(new Values(v.mask, v.color, v.temporary, seconds, v.digitColor, v.contrast, v.weight));
+        setValues(new Values(v.mask, v.color, v.temporary, seconds, v.digitColor, v.contrast, v.weight, v.digitContrast));
     }
 
     public void setDigitColor(int digitColor) {
         Values v = state.values();
-        setValues(new Values(v.mask, v.color, v.temporary, v.duration, digitColor, v.contrast, v.weight));
+        setValues(new Values(v.mask, v.color, v.temporary, v.duration, digitColor, v.contrast, v.weight, v.digitContrast));
     }
 
     public void setBadgeContrast(int tenths) {
         Values v = state.values();
-        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, tenths, v.weight));
+        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, tenths, v.weight, v.digitContrast));
     }
 
     public void setDigitWeight(int weight) {
         Values v = state.values();
-        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, v.contrast, weight));
+        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, v.contrast, weight, v.digitContrast));
+    }
+
+    public void setDigitContrast(int lc) {
+        Values v = state.values();
+        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, v.contrast, v.weight, lc));
     }
 
     private void setMask(int mask) {

@@ -76,6 +76,19 @@ public class SettingsStoreTest {
         assertEquals(45, connected(reopened.freshConnection()).state().badgeContrast);
     }
 
+    @Test public void digitContrastDefaultsToBlackOrWhiteAndPersists() {
+        SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
+        SettingsStore store = connected(remote);
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_MAX, store.state().digitContrast);
+        store.setDigitContrast(75);
+        SettingsTestDoubles.OptimisticPreferences reopened = remote.freshConnection();
+        SettingsStore fresh = connected(reopened);
+        assertEquals(75, fresh.state().digitContrast);
+        fresh.setDigitContrast(12);
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_MAX,
+                connected(reopened.freshConnection()).state().digitContrast);
+    }
+
     @Test public void failedStyleSaveRestoresEveryConfirmedOption() {
         SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
         SettingsStore store = connected(remote);

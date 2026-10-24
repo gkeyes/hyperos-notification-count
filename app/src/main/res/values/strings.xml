@@ -14,11 +14,16 @@
     <string name="settings_color_duration_description">默认 5 秒，修改后从当前通知重新计时。</string>
     <string name="settings_color_seconds">%1$d 秒</string>
     <string name="settings_digit_color_title">数字颜色</string>
-    <string name="settings_digit_color_description">仅在跟随图标颜色时生效。自动：按圆点颜色选黑或白，取对比度更高者；透明：数字镂空，透出状态栏背景。系统黑白时数字始终镂空。</string>
+    <string name="settings_digit_color_description">仅在跟随图标颜色时生效。自动：按圆点颜色选更易读的颜色，深浅见下方数字对比度；透明：数字镂空，透出状态栏背景。系统黑白时数字始终镂空。</string>
     <string name="settings_digit_color_auto">自动</string>
     <string name="settings_digit_color_white">白色</string>
     <string name="settings_digit_color_black">黑色</string>
     <string name="settings_digit_color_transparent">透明</string>
+    <string name="settings_digit_contrast_title">数字对比度</string>
+    <string name="settings_digit_contrast_description">数字颜色为自动时生效。清晰、更清晰：数字沿用圆点的同色系，调深或调浅到所选程度；黑白：纯黑或纯白，按人眼对比自动选择，最易读。</string>
+    <string name="settings_digit_contrast_standard">清晰</string>
+    <string name="settings_digit_contrast_high">更清晰</string>
+    <string name="settings_digit_contrast_max">黑白</string>
     <string name="settings_badge_contrast_title">圆点对比度</string>
     <string name="settings_badge_contrast_description">仅在跟随图标颜色时生效。图标色与状态栏背景对比不足时，会调亮或调暗到所选程度：柔和 3:1，更接近原色；标准 4.5:1；高 7:1，更醒目。</string>
     <string name="settings_badge_contrast_soft">柔和</string>
