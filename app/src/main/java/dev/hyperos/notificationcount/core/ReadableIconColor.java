@@ -26,29 +26,40 @@ public final class ReadableIconColor {
     }
 
     /**
-     * The badge unchanged when its black or white digit already reaches {@code minLc};
-     * otherwise darkened along its own hue just far enough for a white digit to, keeping its
-     * alpha. Darkening keeps the color recognisable on both bars, where lightening for a black
-     * digit would wash it out to near white; on a dark bar the darker badge gives up some
-     * contrast against the bar for a legible digit.
+     * The badge pushed toward black (under a white digit) or toward white (under a black digit)
+     * just far enough for the digit to reach {@code minLc}, keeping its hue and alpha, while the
+     * badge keeps {@code minBarContrast} against the bar. In practice only moving away from the
+     * bar qualifies: a badge dark enough for a white Lc 90 digit is under 3:1 against a dark bar,
+     * so dark bars always lighten (to a pale, near-white badge) and light bars always darken.
      */
-    public static int boostedForDigits(int badge, double minLc) {
+    public static int boostedForDigits(int badge, int systemTint, double minBarContrast, double minLc) {
         int opaque = badge | 0xff000000;
-        int result = opaque;
-        if (lightnessContrast(glyphOn(opaque), opaque) < minLc) {
-            result = 0xff000000;
-            double low = 0;
-            double high = 1;
-            for (int step = 0; step < 12; step++) {
-                double amount = (low + high) / 2;
-                int adjusted = mix(opaque, 0, amount);
-                if (lightnessContrast(0xffffffff, adjusted) >= minLc) {
-                    result = adjusted;
-                    high = amount;
-                } else low = amount;
-            }
-        }
+        int background = barBackground(systemTint);
+        double darken = boostAmount(opaque, 0, 0xffffffff, minLc);
+        double lighten = boostAmount(opaque, 255, 0xff000000, minLc);
+        int darker = mix(opaque, 0, darken);
+        int lighter = mix(opaque, 255, lighten);
+        boolean darkerAllowed = contrast(darker, background) >= minBarContrast;
+        boolean lighterAllowed = contrast(lighter, background) >= minBarContrast;
+        int result;
+        if (darkerAllowed && lighterAllowed) result = darken <= lighten ? darker : lighter;
+        else if (darkerAllowed) result = darker;
+        else if (lighterAllowed) result = lighter;
+        else result = background == 0xff000000 ? lighter : darker;
         return (result & 0x00ffffff) | (badge & 0xff000000);
+    }
+
+    /** Smallest mix toward {@code target} at which {@code digit} reaches {@code minLc}. */
+    private static double boostAmount(int badge, int target, int digit, double minLc) {
+        if (lightnessContrast(digit, badge) >= minLc) return 0;
+        double low = 0;
+        double high = 1;
+        for (int step = 0; step < 12; step++) {
+            double amount = (low + high) / 2;
+            if (lightnessContrast(digit, mix(badge, target, amount)) >= minLc) high = amount;
+            else low = amount;
+        }
+        return high;
     }
 
     public static int onBackground(int source, int background) {

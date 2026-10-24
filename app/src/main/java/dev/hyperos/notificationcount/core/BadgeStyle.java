@@ -23,15 +23,15 @@ public final class BadgeStyle {
 
     /**
      * Badge color: the native tint, or the sampled color adjusted to this style's contrast.
-     * With boosted automatic digits the result is then darkened, when needed, until a white
-     * digit reaches {@link ReadableIconColor#BOOST_LC}; that may take it below the chosen
-     * contrast against a dark bar, which keeps the hue instead of washing it out.
+     * With boosted automatic digits the badge is then pushed darker or lighter until its
+     * black or white digit reaches {@link ReadableIconColor#BOOST_LC}.
      */
     public int badgeColor(Integer candidate, int systemTint) {
-        int badge = ReadableIconColor.forSystemTint(candidate, systemTint, contrastTenths / 10.0);
+        double minimum = contrastTenths / 10.0;
+        int badge = ReadableIconColor.forSystemTint(candidate, systemTint, minimum);
         if (candidate == null || digitColor != FilterPreferences.DIGIT_COLOR_AUTO
                 || digitContrast != FilterPreferences.DIGIT_CONTRAST_BOOST) return badge;
-        return ReadableIconColor.boostedForDigits(badge, ReadableIconColor.BOOST_LC);
+        return ReadableIconColor.boostedForDigits(badge, systemTint, minimum, ReadableIconColor.BOOST_LC);
     }
 
     /** Solid digit color for a colored badge; null keeps the transparent knockout. */
