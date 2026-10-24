@@ -11,8 +11,8 @@ android {
         applicationId = "dev.hyperos.notificationcount"
         minSdk = 37
         targetSdk = 37
-        versionCode = 8
-        versionName = "0.1.7"
+        versionCode = 9
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testProguardFiles("test-proguard-rules.pro")
     }

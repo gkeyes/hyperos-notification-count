@@ -72,6 +72,7 @@ internal fun SettingsScreen(
     onDigitColorChange: (Int) -> Unit,
     onBadgeContrastChange: (Int) -> Unit,
     onDigitWeightChange: (Int) -> Unit,
+    onDigitContrastChange: (Int) -> Unit,
     onReset: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
@@ -133,6 +134,7 @@ internal fun SettingsScreen(
                     digitColor = state.digitColor,
                     badgeContrast = state.badgeContrast,
                     digitWeight = state.digitWeight,
+                    digitContrast = state.digitContrast,
                 ),
                 modifier = Modifier.padding(horizontal = Spacing.gutter).staggeredEntrance(SCREEN, block++),
             )
@@ -153,7 +155,7 @@ internal fun SettingsScreen(
                 SectionHeader(title = stringResource(R.string.settings_section_display))
                 DisplaySection(
                     state, editable, onIconColorChange, onTemporaryColorChange, onColorDurationChange,
-                    onDigitColorChange, onBadgeContrastChange, onDigitWeightChange,
+                    onDigitColorChange, onBadgeContrastChange, onDigitWeightChange, onDigitContrastChange,
                 )
             }
 
@@ -340,6 +342,7 @@ private fun DisplaySection(
     onDigitColorChange: (Int) -> Unit,
     onBadgeContrastChange: (Int) -> Unit,
     onDigitWeightChange: (Int) -> Unit,
+    onDigitContrastChange: (Int) -> Unit,
 ) {
     GroupCard {
         SwitchRow(
@@ -388,6 +391,21 @@ private fun DisplaySection(
             enabled = colorStyleEditable,
             tag = "digit-color",
             onChange = onDigitColorChange,
+        )
+        StyleRow(
+            icon = MiuixIcons.Show,
+            title = stringResource(R.string.settings_digit_contrast_title),
+            summary = stringResource(R.string.settings_digit_contrast_description),
+            labels = listOf(
+                stringResource(R.string.settings_digit_contrast_standard),
+                stringResource(R.string.settings_digit_contrast_high),
+                stringResource(R.string.settings_digit_contrast_max),
+            ),
+            values = FilterPreferences.DIGIT_CONTRASTS,
+            selected = state.digitContrast,
+            enabled = colorStyleEditable && state.digitColor == FilterPreferences.DIGIT_COLOR_AUTO,
+            tag = "digit-contrast",
+            onChange = onDigitContrastChange,
         )
         StyleRow(
             icon = MiuixIcons.Show,

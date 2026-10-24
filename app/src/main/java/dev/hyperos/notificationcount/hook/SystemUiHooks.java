@@ -47,7 +47,8 @@ public final class SystemUiHooks {
                 || FilterPreferences.ICON_COLOR_DURATION.equals(key)
                 || FilterPreferences.DIGIT_COLOR.equals(key)
                 || FilterPreferences.BADGE_CONTRAST.equals(key)
-                || FilterPreferences.DIGIT_WEIGHT.equals(key)) requestRefresh();
+                || FilterPreferences.DIGIT_WEIGHT.equals(key)
+                || FilterPreferences.DIGIT_CONTRAST.equals(key)) requestRefresh();
     };
     private final List<XposedInterface.HookHandle> handles = new ArrayList<>();
     private final Class<?> pipelineType;
@@ -293,7 +294,8 @@ public final class SystemUiHooks {
                 FilterPreferences.readColorDuration(filterPreferences),
                 new BadgeStyle(FilterPreferences.readDigitColor(filterPreferences),
                         FilterPreferences.readBadgeContrast(filterPreferences),
-                        FilterPreferences.readDigitWeight(filterPreferences)));
+                        FilterPreferences.readDigitWeight(filterPreferences),
+                        FilterPreferences.readDigitContrast(filterPreferences)));
     }
 
     private void fail(Throwable error) {

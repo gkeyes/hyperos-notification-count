@@ -76,6 +76,7 @@ internal data class BadgePreviewSettings(
     val digitColor: Int,
     val badgeContrast: Int,
     val digitWeight: Int,
+    val digitContrast: Int,
 )
 
 /**
@@ -105,7 +106,7 @@ internal fun CountBadgePreview(settings: BadgePreviewSettings, modifier: Modifie
     val colored = settings.iconColorEnabled && (!settings.temporaryColor || colorWindowOpen)
     val barColor = MiuixTheme.colorScheme.background
     val systemTint = MiuixTheme.colorScheme.onBackground
-    val style = BadgeStyle(settings.digitColor, settings.badgeContrast, settings.digitWeight)
+    val style = BadgeStyle(settings.digitColor, settings.badgeContrast, settings.digitWeight, settings.digitContrast)
     val candidate: Int? = if (colored) family.sampleAppColor else null
     val badgeArgb = style.badgeColor(candidate, systemTint.toArgb())
     val glyphArgb: Int? = style.glyphColor(candidate, badgeArgb)

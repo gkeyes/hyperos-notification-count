@@ -49,7 +49,22 @@ public class ReadableIconColorTest {
             int badge = 0xff000000 | (r << 16) | (g << 8) | b;
             int glyph = ReadableIconColor.glyphOn(badge);
             int other = glyph == 0xffffffff ? 0xff000000 : 0xffffffff;
-            assertTrue(ReadableIconColor.contrast(glyph, badge) >= ReadableIconColor.contrast(other, badge));
+            assertTrue(ReadableIconColor.lightnessContrast(glyph, badge)
+                    >= ReadableIconColor.lightnessContrast(other, badge));
+        }
+        // Mid-tone green: the WCAG ratio slightly favours black, but white reads far better.
+        assertEquals(0xffffffff, ReadableIconColor.glyphOn(0xff3c874a));
+    }
+
+    @Test public void tintedDigitsReachTheTargetOrFallBackToBlackOrWhite() {
+        for (int r = 0; r <= 255; r += 51) for (int g = 0; g <= 255; g += 51) for (int b = 0; b <= 255; b += 51) {
+            int badge = 0xff000000 | (r << 16) | (g << 8) | b;
+            for (double target : new double[]{60, 75}) {
+                int glyph = ReadableIconColor.tintedGlyphOn(badge, target);
+                assertTrue(ReadableIconColor.lightnessContrast(glyph, badge) >= target
+                        || glyph == ReadableIconColor.glyphOn(badge));
+                assertEquals(255, glyph >>> 24);
+            }
         }
     }
 }

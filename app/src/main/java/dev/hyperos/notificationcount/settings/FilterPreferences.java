@@ -27,6 +27,15 @@ public final class FilterPreferences {
     public static final String BADGE_CONTRAST = "badge_contrast_tenths";
     public static final int DEFAULT_BADGE_CONTRAST = 45;
     public static final List<Integer> BADGE_CONTRASTS = List.of(30, 45, 70);
+    /**
+     * Minimum APCA lightness contrast (Lc) of automatic digits against the badge. Below the
+     * maximum the digit keeps the badge's hue, darkened or lightened just enough; the maximum
+     * is pure black or white, whichever reads better.
+     */
+    public static final String DIGIT_CONTRAST = "badge_digit_contrast_lc";
+    public static final int DIGIT_CONTRAST_MAX = 0;
+    public static final int DEFAULT_DIGIT_CONTRAST = DIGIT_CONTRAST_MAX;
+    public static final List<Integer> DIGIT_CONTRASTS = List.of(60, 75, DIGIT_CONTRAST_MAX);
     /** Digit weight: index into the normal / medium / bold vector sets. */
     public static final String DIGIT_WEIGHT = "badge_digit_weight";
     public static final int WEIGHT_NORMAL = 0;
@@ -77,6 +86,14 @@ public final class FilterPreferences {
 
     public static int normalizeBadgeContrast(int tenths) {
         return BADGE_CONTRASTS.contains(tenths) ? tenths : DEFAULT_BADGE_CONTRAST;
+    }
+
+    public static int readDigitContrast(SharedPreferences preferences) {
+        return normalizeDigitContrast(preferences.getInt(DIGIT_CONTRAST, DEFAULT_DIGIT_CONTRAST));
+    }
+
+    public static int normalizeDigitContrast(int lc) {
+        return DIGIT_CONTRASTS.contains(lc) ? lc : DEFAULT_DIGIT_CONTRAST;
     }
 
     public static int readDigitWeight(SharedPreferences preferences) {

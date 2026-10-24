@@ -32,6 +32,7 @@ class SettingsActivity : ComponentActivity() {
                         onDigitColorChange = store::setDigitColor,
                         onBadgeContrastChange = store::setBadgeContrast,
                         onDigitWeightChange = store::setDigitWeight,
+                        onDigitContrastChange = store::setDigitContrast,
                         onReset = store::reset,
                         onRetry = store::retry,
                         onBack = ::finish,
