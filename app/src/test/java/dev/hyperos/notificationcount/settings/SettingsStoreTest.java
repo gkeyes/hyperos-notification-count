@@ -79,14 +79,18 @@ public class SettingsStoreTest {
     @Test public void digitContrastDefaultsToBlackOrWhiteAndPersists() {
         SettingsTestDoubles.OptimisticPreferences remote = new SettingsTestDoubles.OptimisticPreferences();
         SettingsStore store = connected(remote);
-        assertEquals(FilterPreferences.DIGIT_CONTRAST_MAX, store.state().digitContrast);
-        store.setDigitContrast(75);
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_BLACK_WHITE, store.state().digitContrast);
+        store.setDigitContrast(FilterPreferences.DIGIT_CONTRAST_BOOST);
         SettingsTestDoubles.OptimisticPreferences reopened = remote.freshConnection();
         SettingsStore fresh = connected(reopened);
-        assertEquals(75, fresh.state().digitContrast);
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_BOOST, fresh.state().digitContrast);
         fresh.setDigitContrast(12);
-        assertEquals(FilterPreferences.DIGIT_CONTRAST_MAX,
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_BLACK_WHITE,
                 connected(reopened.freshConnection()).state().digitContrast);
+        // 0.2.0 stored APCA targets: 60 / 75 kept the hue and 0 meant black or white.
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_HUE, FilterPreferences.normalizeDigitContrast(60));
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_HUE, FilterPreferences.normalizeDigitContrast(75));
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_BLACK_WHITE, FilterPreferences.normalizeDigitContrast(0));
     }
 
     @Test public void failedStyleSaveRestoresEveryConfirmedOption() {

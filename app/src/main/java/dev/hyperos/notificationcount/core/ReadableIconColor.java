@@ -3,6 +3,10 @@ package dev.hyperos.notificationcount.core;
 /** Preserve the sampled hue, adjusting brightness against the native light/dark icon decision. */
 public final class ReadableIconColor {
     private static final double MIN_CONTRAST = 4.5;
+    /** APCA Lc of digits that keep the badge hue: body-text legibility. */
+    public static final double HUE_LC = 75;
+    /** APCA Lc of boosted digits: what APCA asks for very small text such as a badge digit. */
+    public static final double BOOST_LC = 90;
     private ReadableIconColor() { }
 
     public static int forSystemTint(Integer candidate, int systemTint) {
@@ -12,8 +16,49 @@ public final class ReadableIconColor {
     /** As above with a caller-chosen minimum contrast against the inferred background. */
     public static int forSystemTint(Integer candidate, int systemTint, double minContrast) {
         if (candidate == null) return systemTint;
-        int background = luminance(systemTint) < .5 ? 0xffffffff : 0xff000000;
+        int background = barBackground(systemTint);
         return (onBackground(candidate, background, minContrast) & 0x00ffffff) | (systemTint & 0xff000000);
+    }
+
+    /** Light icons imply a dark status bar and the other way round. */
+    private static int barBackground(int systemTint) {
+        return luminance(systemTint) < .5 ? 0xffffffff : 0xff000000;
+    }
+
+    /**
+     * The badge pushed toward black (under a white digit) or toward white (under a black digit)
+     * just far enough for the digit to reach {@code minLc}, keeping its hue and alpha. Of the two,
+     * the smaller change wins as long as the badge keeps {@code minBarContrast} against the bar;
+     * moving away from the bar always does, so one direction is always allowed.
+     */
+    public static int boostedForDigits(int badge, int systemTint, double minBarContrast, double minLc) {
+        int opaque = badge | 0xff000000;
+        int background = barBackground(systemTint);
+        double darken = boostAmount(opaque, 0, 0xffffffff, minLc);
+        double lighten = boostAmount(opaque, 255, 0xff000000, minLc);
+        int darker = mix(opaque, 0, darken);
+        int lighter = mix(opaque, 255, lighten);
+        boolean darkerAllowed = contrast(darker, background) >= minBarContrast;
+        boolean lighterAllowed = contrast(lighter, background) >= minBarContrast;
+        int result;
+        if (darkerAllowed && lighterAllowed) result = darken <= lighten ? darker : lighter;
+        else if (darkerAllowed) result = darker;
+        else if (lighterAllowed) result = lighter;
+        else result = background == 0xff000000 ? lighter : darker;
+        return (result & 0x00ffffff) | (badge & 0xff000000);
+    }
+
+    /** Smallest mix toward {@code target} at which {@code digit} reaches {@code minLc}. */
+    private static double boostAmount(int badge, int target, int digit, double minLc) {
+        if (lightnessContrast(digit, badge) >= minLc) return 0;
+        double low = 0;
+        double high = 1;
+        for (int step = 0; step < 12; step++) {
+            double amount = (low + high) / 2;
+            if (lightnessContrast(digit, mix(badge, target, amount)) >= minLc) high = amount;
+            else low = amount;
+        }
+        return high;
     }
 
     public static int onBackground(int source, int background) {

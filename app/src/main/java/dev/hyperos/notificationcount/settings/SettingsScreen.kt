@@ -502,9 +502,9 @@ private fun DisplaySection(
             title = stringResource(R.string.settings_digit_contrast_title),
             summary = stringResource(R.string.settings_digit_contrast_description),
             labels = listOf(
-                stringResource(R.string.settings_digit_contrast_standard),
-                stringResource(R.string.settings_digit_contrast_high),
-                stringResource(R.string.settings_digit_contrast_max),
+                stringResource(R.string.settings_digit_contrast_hue),
+                stringResource(R.string.settings_digit_contrast_black_white),
+                stringResource(R.string.settings_digit_contrast_boost),
             ),
             values = FilterPreferences.DIGIT_CONTRASTS,
             selected = state.digitContrast,
