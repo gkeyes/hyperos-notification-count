@@ -374,14 +374,14 @@ class SettingsActivityTest {
         composeRule.onNodeWithTag("filter-${NotificationType.MEDIA.key}").assertDoesNotExist()
         composeRule.onNodeWithTag("icon-color-switch").assertDoesNotExist()
 
-        display.performClick()
+        display.performScrollTo().performClick()
         composeRule.onNodeWithTag("icon-color-switch").assertExists()
         display.assertDoesNotExist()
         composeRule.onNodeWithTag("settings-back").performClick()
         display.assertExists()
 
         connectPersisted()
-        filters.performClick()
+        filters.performScrollTo().performClick()
         filter(NotificationType.MEDIA).performScrollTo().performClick().assertIsOn()
         // System Back returns to home instead of closing the activity.
         composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
@@ -397,7 +397,7 @@ class SettingsActivityTest {
         if (composeRule.onAllNodesWithTag(navTag).fetchSemanticsNodes().isEmpty()) {
             composeRule.onNodeWithTag("settings-back").performClick()
         }
-        composeRule.onNodeWithTag(navTag).performClick()
+        composeRule.onNodeWithTag(navTag).performScrollTo().performClick()
         composeRule.onNodeWithTag(navTag).assertDoesNotExist()
     }
 
