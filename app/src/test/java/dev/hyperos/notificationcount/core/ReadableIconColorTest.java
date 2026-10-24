@@ -59,7 +59,7 @@ public class ReadableIconColorTest {
     @Test public void tintedDigitsReachTheTargetOrFallBackToBlackOrWhite() {
         for (int r = 0; r <= 255; r += 51) for (int g = 0; g <= 255; g += 51) for (int b = 0; b <= 255; b += 51) {
             int badge = 0xff000000 | (r << 16) | (g << 8) | b;
-            for (double target : new double[]{60, 75}) {
+            for (double target : new double[]{60, ReadableIconColor.HUE_LC}) {
                 int glyph = ReadableIconColor.tintedGlyphOn(badge, target);
                 assertTrue(ReadableIconColor.lightnessContrast(glyph, badge) >= target
                         || glyph == ReadableIconColor.glyphOn(badge));

@@ -6,7 +6,9 @@ import dev.hyperos.notificationcount.settings.FilterPreferences;
 import org.junit.Test;
 
 public class BadgeStyleTest {
-    private static final int MAX = FilterPreferences.DIGIT_CONTRAST_MAX;
+    private static final int MAX = FilterPreferences.DIGIT_CONTRAST_BLACK_WHITE;
+    private static final int HUE = FilterPreferences.DIGIT_CONTRAST_HUE;
+    private static final int BOOST = FilterPreferences.DIGIT_CONTRAST_BOOST;
 
     @Test public void monochromeBadgesKeepTheNativeTintAndKnockout() {
         for (int digit : FilterPreferences.DIGIT_COLORS) {
@@ -45,22 +47,52 @@ public class BadgeStyleTest {
         assertEquals(BadgeStyle.DEFAULT, odd);
         assertEquals(BadgeStyle.DEFAULT.hashCode(), odd.hashCode());
         assertNotEquals(BadgeStyle.DEFAULT, new BadgeStyle(0, 45, FilterPreferences.WEIGHT_MEDIUM, MAX));
-        assertNotEquals(BadgeStyle.DEFAULT, new BadgeStyle(0, 45, 0, 60));
+        assertNotEquals(BadgeStyle.DEFAULT, new BadgeStyle(0, 45, 0, HUE));
     }
 
-    @Test public void automaticDigitContrastLevelsKeepTheBadgeHueUntilTheMaximum() {
+    @Test public void hueAndBlackWhiteDigitsLeaveTheBadgeAlone() {
         int badge = 0xff3c874a; // the medium green from the user's screenshot
         assertEquals(0xffffffff, (int) new BadgeStyle(0, 45, 0, MAX).glyphColor(1, badge));
-        int standard = new BadgeStyle(0, 45, 0, 60).glyphColor(1, badge);
-        int high = new BadgeStyle(0, 45, 0, 75).glyphColor(1, badge);
-        assertTrue(ReadableIconColor.lightnessContrast(standard, badge) >= 60);
-        assertTrue(ReadableIconColor.lightnessContrast(high, badge) >= 75);
-        assertNotEquals(0xffffffff, standard);
-        assertTrue(ReadableIconColor.lightnessContrast(high, badge)
-                >= ReadableIconColor.lightnessContrast(standard, badge));
+        int hue = new BadgeStyle(0, 45, 0, HUE).glyphColor(1, badge);
+        assertTrue(ReadableIconColor.lightnessContrast(hue, badge) >= ReadableIconColor.HUE_LC);
         // Alpha follows the badge so the digit fades with the disc.
-        assertEquals(0x88, new BadgeStyle(0, 45, 0, 60).glyphColor(1, 0x883c874a) >>> 24);
+        assertEquals(0x88, new BadgeStyle(0, 45, 0, HUE).glyphColor(1, 0x883c874a) >>> 24);
         // Forced colors ignore the automatic contrast level.
-        assertEquals(0xff000000, (int) new BadgeStyle(FilterPreferences.DIGIT_COLOR_BLACK, 45, 0, 60).glyphColor(1, badge));
+        assertEquals(0xff000000, (int) new BadgeStyle(FilterPreferences.DIGIT_COLOR_BLACK, 45, 0, HUE).glyphColor(1, badge));
+        for (int tint : new int[]{0xffffffff, 0xff000000}) {
+            assertEquals(new BadgeStyle(0, 45, 0, MAX).badgeColor(badge, tint),
+                    new BadgeStyle(0, 45, 0, HUE).badgeColor(badge, tint));
+        }
+    }
+
+    @Test public void boostedDigitsBeatBlackOrWhiteWhileTheBadgeKeepsItsBarContrast() {
+        int[] sources = {0xff3c874a, 0xff07c160, 0xfff44336, 0xff2196f3, 0xff009688, 0xffffeb3b, 0xffff00ff, 0xff777777};
+        for (int tenths : FilterPreferences.BADGE_CONTRASTS) {
+            for (int tint : new int[]{0xffffffff, 0xff000000}) {
+                int bar = tint == 0xffffffff ? 0xff000000 : 0xffffffff;
+                for (int source : sources) {
+                    BadgeStyle plain = new BadgeStyle(0, tenths, 0, MAX);
+                    BadgeStyle boost = new BadgeStyle(0, tenths, 0, BOOST);
+                    int plainBadge = plain.badgeColor(source, tint);
+                    int boostBadge = boost.badgeColor(source, tint);
+                    int plainDigit = plain.glyphColor(source, plainBadge);
+                    int boostDigit = boost.glyphColor(source, boostBadge);
+                    double boosted = ReadableIconColor.lightnessContrast(boostDigit, boostBadge);
+                    assertTrue(boosted >= ReadableIconColor.BOOST_LC);
+                    assertTrue(boosted >= ReadableIconColor.lightnessContrast(plainDigit, plainBadge));
+                    assertTrue(ReadableIconColor.contrast(boostBadge, bar) >= tenths / 10.0);
+                    assertTrue(boostDigit == 0xffffffff || boostDigit == 0xff000000);
+                }
+            }
+        }
+        // The screenshot green on a light bar turns darker green under a white digit.
+        int green = new BadgeStyle(0, 45, 0, BOOST).badgeColor(0xff3c874a, 0xff000000);
+        assertEquals(0xffffffff, (int) new BadgeStyle(0, 45, 0, BOOST).glyphColor(1, green));
+        assertTrue(((green >>> 8) & 255) > ((green >>> 16) & 255));
+        // Badge alpha is kept, and forced digit colors leave the badge untouched.
+        assertEquals(0x80, ReadableIconColor.boostedForDigits(0x803c874a, 0xff000000, 4.5, 90) >>> 24);
+        assertEquals(new BadgeStyle(FilterPreferences.DIGIT_COLOR_WHITE, 45, 0, MAX).badgeColor(0xff3c874a, 0xff000000),
+                new BadgeStyle(FilterPreferences.DIGIT_COLOR_WHITE, 45, 0, BOOST).badgeColor(0xff3c874a, 0xff000000));
+        assertEquals(0xffffffff, new BadgeStyle(0, 45, 0, BOOST).badgeColor(null, 0xffffffff));
     }
 }

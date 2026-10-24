@@ -28,14 +28,17 @@ public final class FilterPreferences {
     public static final int DEFAULT_BADGE_CONTRAST = 45;
     public static final List<Integer> BADGE_CONTRASTS = List.of(30, 45, 70);
     /**
-     * Minimum APCA lightness contrast (Lc) of automatic digits against the badge. Below the
-     * maximum the digit keeps the badge's hue, darkened or lightened just enough; the maximum
-     * is pure black or white, whichever reads better.
+     * How automatic digits stand out from the badge: in the badge's own hue, pure black or
+     * white, or black/white with the badge itself pushed darker or lighter for more contrast.
+     * 0.2.0 stored APCA targets here (60 / 75 = hue, 0 = black or white); they still read.
      */
     public static final String DIGIT_CONTRAST = "badge_digit_contrast_lc";
-    public static final int DIGIT_CONTRAST_MAX = 0;
-    public static final int DEFAULT_DIGIT_CONTRAST = DIGIT_CONTRAST_MAX;
-    public static final List<Integer> DIGIT_CONTRASTS = List.of(60, 75, DIGIT_CONTRAST_MAX);
+    public static final int DIGIT_CONTRAST_HUE = 1;
+    public static final int DIGIT_CONTRAST_BLACK_WHITE = 2;
+    public static final int DIGIT_CONTRAST_BOOST = 3;
+    public static final int DEFAULT_DIGIT_CONTRAST = DIGIT_CONTRAST_BLACK_WHITE;
+    public static final List<Integer> DIGIT_CONTRASTS =
+            List.of(DIGIT_CONTRAST_HUE, DIGIT_CONTRAST_BLACK_WHITE, DIGIT_CONTRAST_BOOST);
     /** Digit weight: index into the normal / medium / bold vector sets. */
     public static final String DIGIT_WEIGHT = "badge_digit_weight";
     public static final int WEIGHT_NORMAL = 0;
@@ -92,8 +95,9 @@ public final class FilterPreferences {
         return normalizeDigitContrast(preferences.getInt(DIGIT_CONTRAST, DEFAULT_DIGIT_CONTRAST));
     }
 
-    public static int normalizeDigitContrast(int lc) {
-        return DIGIT_CONTRASTS.contains(lc) ? lc : DEFAULT_DIGIT_CONTRAST;
+    public static int normalizeDigitContrast(int mode) {
+        if (mode == 60 || mode == 75) return DIGIT_CONTRAST_HUE;
+        return DIGIT_CONTRASTS.contains(mode) ? mode : DEFAULT_DIGIT_CONTRAST;
     }
 
     public static int readDigitWeight(SharedPreferences preferences) {

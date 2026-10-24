@@ -227,9 +227,9 @@ public final class SettingsStore {
         setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, v.contrast, weight, v.digitContrast));
     }
 
-    public void setDigitContrast(int lc) {
+    public void setDigitContrast(int mode) {
         Values v = state.values();
-        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, v.contrast, v.weight, lc));
+        setValues(new Values(v.mask, v.color, v.temporary, v.duration, v.digitColor, v.contrast, v.weight, mode));
     }
 
     private void setMask(int mask) {

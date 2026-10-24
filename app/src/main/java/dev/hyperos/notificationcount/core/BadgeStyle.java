@@ -11,19 +11,27 @@ public final class BadgeStyle {
     public final int digitColor;
     public final int contrastTenths;
     public final int weight;
-    /** Automatic digit contrast against the badge as APCA Lc; see FilterPreferences.DIGIT_CONTRAST. */
-    public final int digitContrastLc;
+    /** How automatic digits stand out; see FilterPreferences.DIGIT_CONTRAST. */
+    public final int digitContrast;
 
-    public BadgeStyle(int digitColor, int contrastTenths, int weight, int digitContrastLc) {
+    public BadgeStyle(int digitColor, int contrastTenths, int weight, int digitContrast) {
         this.digitColor = FilterPreferences.normalizeDigitColor(digitColor);
         this.contrastTenths = FilterPreferences.normalizeBadgeContrast(contrastTenths);
         this.weight = FilterPreferences.normalizeDigitWeight(weight);
-        this.digitContrastLc = FilterPreferences.normalizeDigitContrast(digitContrastLc);
+        this.digitContrast = FilterPreferences.normalizeDigitContrast(digitContrast);
     }
 
-    /** Badge color: the native tint, or the sampled color adjusted to this style's contrast. */
+    /**
+     * Badge color: the native tint, or the sampled color adjusted to this style's contrast.
+     * With boosted automatic digits the badge is then pushed darker or lighter until its
+     * black or white digit reaches {@link ReadableIconColor#BOOST_LC}.
+     */
     public int badgeColor(Integer candidate, int systemTint) {
-        return ReadableIconColor.forSystemTint(candidate, systemTint, contrastTenths / 10.0);
+        double minimum = contrastTenths / 10.0;
+        int badge = ReadableIconColor.forSystemTint(candidate, systemTint, minimum);
+        if (candidate == null || digitColor != FilterPreferences.DIGIT_COLOR_AUTO
+                || digitContrast != FilterPreferences.DIGIT_CONTRAST_BOOST) return badge;
+        return ReadableIconColor.boostedForDigits(badge, systemTint, minimum, ReadableIconColor.BOOST_LC);
     }
 
     /** Solid digit color for a colored badge; null keeps the transparent knockout. */
@@ -32,18 +40,20 @@ public final class BadgeStyle {
         int alpha = badge & 0xff000000;
         if (digitColor == FilterPreferences.DIGIT_COLOR_WHITE) return 0x00ffffff | alpha;
         if (digitColor == FilterPreferences.DIGIT_COLOR_BLACK) return alpha;
-        if (digitContrastLc == FilterPreferences.DIGIT_CONTRAST_MAX) return ReadableIconColor.glyphOn(badge);
-        return ReadableIconColor.tintedGlyphOn(badge, digitContrastLc);
+        if (digitContrast == FilterPreferences.DIGIT_CONTRAST_HUE) {
+            return ReadableIconColor.tintedGlyphOn(badge, ReadableIconColor.HUE_LC);
+        }
+        return ReadableIconColor.glyphOn(badge);
     }
 
     @Override public boolean equals(Object other) {
         if (!(other instanceof BadgeStyle)) return false;
         BadgeStyle style = (BadgeStyle) other;
         return digitColor == style.digitColor && contrastTenths == style.contrastTenths
-                && weight == style.weight && digitContrastLc == style.digitContrastLc;
+                && weight == style.weight && digitContrast == style.digitContrast;
     }
 
     @Override public int hashCode() {
-        return ((digitColor * 31 + contrastTenths) * 31 + weight) * 31 + digitContrastLc;
+        return ((digitColor * 31 + contrastTenths) * 31 + weight) * 31 + digitContrast;
     }
 }

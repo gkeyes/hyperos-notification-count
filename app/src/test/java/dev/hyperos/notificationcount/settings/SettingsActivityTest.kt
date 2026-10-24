@@ -268,7 +268,17 @@ class SettingsActivityTest {
         val black = composeRule.onNodeWithText(application.getString(R.string.settings_digit_color_black))
         black.performScrollTo().assertIsNotEnabled()
         composeRule.onNodeWithTag("icon-color-switch").performScrollTo().performClick()
+        val digitContrast = composeRule.onNodeWithTag("digit-contrast")
+        digitContrast.performScrollTo().assert(stateDescription(R.string.settings_digit_contrast_black_white))
+        composeRule.onNodeWithText(application.getString(R.string.settings_digit_contrast_boost))
+            .performScrollTo().assertIsEnabled().performClick()
+        assertEquals(FilterPreferences.DIGIT_CONTRAST_BOOST, composeRule.runOnIdle {
+            persisted.getInt(FilterPreferences.DIGIT_CONTRAST, -1)
+        })
+        digitContrast.assert(stateDescription(R.string.settings_digit_contrast_boost))
         black.performScrollTo().assertIsEnabled().performClick()
+        // A forced digit color makes the automatic contrast row inapplicable.
+        composeRule.onNodeWithText(application.getString(R.string.settings_digit_contrast_boost)).assertIsNotEnabled()
         assertEquals(FilterPreferences.DIGIT_COLOR_BLACK, composeRule.runOnIdle {
             persisted.getInt(FilterPreferences.DIGIT_COLOR, -1)
         })
