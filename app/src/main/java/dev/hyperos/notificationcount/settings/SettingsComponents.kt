@@ -222,13 +222,13 @@ internal fun NavRow(
     icon: ImageVector,
     title: String,
     summary: String,
-    onClick: () -> Unit,
+    onOpen: () -> Unit,
     testTag: String,
 ) {
     ArrowPreference(
         title = title,
         summary = summary,
-        onClick = onClick,
+        onClick = onOpen,
         startAction = { LeadingIcon(icon, active = true) },
         modifier = Modifier
             .heightIn(min = Dimens.rowMinHeight)
@@ -238,7 +238,7 @@ internal fun NavRow(
                 contentDescription = "$title。$summary"
                 role = Role.Button
                 onClick {
-                    onClick()
+                    onOpen()
                     true
                 }
             },

@@ -105,7 +105,7 @@ internal fun SettingsScreen(
                 onBack = onBack,
             ) {
                 var block = 0
-                Preview(state, Modifier.staggeredEntrance(current.screen, block++))
+                PagePreview(state, Modifier.staggeredEntrance(current.screen, block++))
                 Spacer(Modifier.height(Spacing.sm))
                 ConnectionCard(
                     status = state.status,
@@ -124,14 +124,14 @@ internal fun SettingsScreen(
                         icon = MiuixIcons.Theme,
                         title = stringResource(R.string.settings_section_display),
                         summary = stringResource(R.string.settings_nav_display_summary),
-                        onClick = { page = SettingsPage.DISPLAY },
+                        onOpen = { page = SettingsPage.DISPLAY },
                         testTag = "nav-display",
                     )
                     NavRow(
                         icon = MiuixIcons.Filter,
                         title = stringResource(R.string.settings_section_filters),
                         summary = stringResource(R.string.settings_selected, Integer.bitCount(state.mask)),
-                        onClick = { page = SettingsPage.FILTERS },
+                        onOpen = { page = SettingsPage.FILTERS },
                         testTag = "nav-filters",
                     )
                 }
@@ -142,7 +142,7 @@ internal fun SettingsScreen(
                 onBack = goHome,
             ) {
                 var block = 0
-                Preview(state, Modifier.staggeredEntrance(current.screen, block++))
+                PagePreview(state, Modifier.staggeredEntrance(current.screen, block++))
                 UnsettledConnection(state, onRetry, Modifier.staggeredEntrance(current.screen, block++))
                 Spacer(Modifier.height(Spacing.sm))
                 Column(Modifier.staggeredEntrance(current.screen, block++)) {
@@ -265,7 +265,7 @@ private fun PageScaffold(
 }
 
 @Composable
-private fun Preview(state: SettingsStore.State, modifier: Modifier) {
+private fun PagePreview(state: SettingsStore.State, modifier: Modifier) {
     CountBadgePreview(
         settings = BadgePreviewSettings(
             iconColorEnabled = state.iconColorEnabled,
