@@ -12,7 +12,9 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -90,6 +92,17 @@ internal object Motion {
             targetContentEnter = fadeIn(effects()),
             initialContentExit = fadeOut(effects()),
             sizeTransform = SizeTransform(clip = false) { _, _ -> spatialSize() },
+        )
+
+    /** Page push: a sub-page enters from the end edge; going back reverses it. */
+    fun pagePush(forward: Boolean, reduce: Boolean): ContentTransform =
+        if (reduce) EnterTransition.None togetherWith ExitTransition.None
+        else ContentTransform(
+            targetContentEnter = slideInHorizontally(spatialOffset()) { if (forward) it / 4 else -it / 4 } +
+                fadeIn(effects()),
+            initialContentExit = slideOutHorizontally(spatialOffset()) { if (forward) -it / 4 else it / 4 } +
+                fadeOut(effects()),
+            sizeTransform = null,
         )
 
     /** Digit roll: up when the value grows, down when it shrinks. */
