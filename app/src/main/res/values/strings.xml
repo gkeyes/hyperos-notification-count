@@ -4,8 +4,10 @@
     <string name="settings_title">通知数量</string>
     <string name="settings_version">版本 %1$s · 系统界面</string>
     <string name="settings_back">返回</string>
-    <string name="settings_intro">下方过滤开关开启 = 从数量中排除这类通知。过滤默认全部关闭，只改变计数，不清除通知。显示样式中的选项单独控制徽标外观。</string>
+    <string name="settings_intro">通知过滤里的开关开启 = 从数量中排除这类通知。过滤默认全部关闭，只改变计数，不清除通知。显示样式中的选项单独控制徽标外观。</string>
     <string name="settings_section_display">显示样式</string>
+    <string name="settings_section_filters">通知过滤</string>
+    <string name="settings_nav_display_summary">图标变色、数字颜色与对比度、粗细</string>
     <string name="settings_icon_color_title">跟随通知 App 图标颜色</string>
     <string name="settings_icon_color_description">默认关闭。开启后，圆点使用最新参与计数通知的 App 图标候选色，并适应深浅背景。取不到彩色时沿用系统黑白色。数字仍表示通知总数。</string>
     <string name="settings_temporary_color_title">临时变色</string>

@@ -1,6 +1,13 @@
 package dev.hyperos.notificationcount.settings
 
 import androidx.compose.animation.AnimatedContent
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import top.yukonga.miuix.kmp.icon.extended.Filter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,12 +62,17 @@ import top.yukonga.miuix.kmp.icon.extended.Stopwatch
 import top.yukonga.miuix.kmp.icon.extended.Theme
 import top.yukonga.miuix.kmp.icon.extended.Tune
 
-private const val SCREEN = "settings"
+/** Home is the root; the two sub-pages hold the long lists that used to share one scroll. */
+internal enum class SettingsPage(val screen: String) {
+    HOME("settings"),
+    DISPLAY("settings-display"),
+    FILTERS("settings-filters"),
+}
 
 /**
- * The module's only screen: live badge preview, connection state, display style and the
- * three filter groups. Miuix large title collapses on scroll with a hairline fading in;
- * content is edge-to-edge and scrolls behind the navigation bar.
+ * Three pages: home (live preview, connection state and links), display style, and the
+ * three filter groups. System Back and the top-bar arrow return a sub-page to home; the
+ * page survives recreation.
  */
 @Composable
 internal fun SettingsScreen(
@@ -77,7 +89,124 @@ internal fun SettingsScreen(
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val editable = state.status == SettingsStore.Status.READY
+    var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
+    val goHome = { page = SettingsPage.HOME }
+    BackHandler(enabled = page != SettingsPage.HOME, onBack = goHome)
+    val reduce = reduceMotion
+    AnimatedContent(
+        targetState = page,
+        transitionSpec = { Motion.pagePush(forward = targetState != SettingsPage.HOME, reduce = reduce) },
+        label = "settingsPage",
+    ) { current ->
+        when (current) {
+            SettingsPage.HOME -> PageScaffold(
+                title = stringResource(R.string.settings_title),
+                subtitle = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                onBack = onBack,
+            ) {
+                var block = 0
+                PagePreview(state, Modifier.staggeredEntrance(current.screen, block++))
+                Spacer(Modifier.height(Spacing.sm))
+                ConnectionCard(
+                    status = state.status,
+                    enabledFilters = Integer.bitCount(state.mask),
+                    onRetry = onRetry,
+                    modifier = Modifier.staggeredEntrance(current.screen, block++),
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                Footnote(
+                    text = stringResource(R.string.settings_intro),
+                    modifier = Modifier.staggeredEntrance(current.screen, block++),
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                GroupCard(Modifier.staggeredEntrance(current.screen, block++)) {
+                    NavRow(
+                        icon = MiuixIcons.Theme,
+                        title = stringResource(R.string.settings_section_display),
+                        summary = stringResource(R.string.settings_nav_display_summary),
+                        onOpen = { page = SettingsPage.DISPLAY },
+                        testTag = "nav-display",
+                    )
+                    NavRow(
+                        icon = MiuixIcons.Filter,
+                        title = stringResource(R.string.settings_section_filters),
+                        summary = stringResource(R.string.settings_selected, Integer.bitCount(state.mask)),
+                        onOpen = { page = SettingsPage.FILTERS },
+                        testTag = "nav-filters",
+                    )
+                }
+            }
+
+            SettingsPage.DISPLAY -> PageScaffold(
+                title = stringResource(R.string.settings_section_display),
+                onBack = goHome,
+            ) {
+                var block = 0
+                PagePreview(state, Modifier.staggeredEntrance(current.screen, block++))
+                UnsettledConnection(state, onRetry, Modifier.staggeredEntrance(current.screen, block++))
+                Spacer(Modifier.height(Spacing.sm))
+                Column(Modifier.staggeredEntrance(current.screen, block++)) {
+                    DisplaySection(
+                        state, state.status == SettingsStore.Status.READY,
+                        onIconColorChange, onTemporaryColorChange, onColorDurationChange,
+                        onDigitColorChange, onBadgeContrastChange, onDigitWeightChange, onDigitContrastChange,
+                    )
+                }
+            }
+
+            SettingsPage.FILTERS -> PageScaffold(
+                title = stringResource(R.string.settings_section_filters),
+                onBack = goHome,
+            ) {
+                val editable = state.status == SettingsStore.Status.READY
+                var block = 0
+                // Always shown here: the banner carries the "N filters on" count for this page.
+                ConnectionCard(
+                    status = state.status,
+                    enabledFilters = Integer.bitCount(state.mask),
+                    onRetry = onRetry,
+                    modifier = Modifier.staggeredEntrance(current.screen, block++),
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                Footnote(
+                    text = stringResource(R.string.settings_overlap),
+                    modifier = Modifier.staggeredEntrance(current.screen, block++),
+                )
+                filterGroups.forEach { group ->
+                    Column(Modifier.staggeredEntrance(current.screen, block++)) {
+                        SectionHeader(
+                            title = stringResource(group.title),
+                            enabled = group.enabledCount(state.mask),
+                            total = group.types.size,
+                        )
+                        FilterSection(group, state.mask, editable, onFilterChange)
+                    }
+                }
+                Spacer(Modifier.height(Spacing.lg))
+                FamilyButton(
+                    text = stringResource(R.string.settings_reset),
+                    onClick = onReset,
+                    enabled = editable && state.mask != 0,
+                    testTag = "settings-reset",
+                    kind = ButtonKind.DESTRUCTIVE,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * One page: Miuix large title that collapses on scroll with a hairline fading in; content is
+ * edge-to-edge and scrolls behind the navigation bar.
+ */
+@Composable
+private fun PageScaffold(
+    title: String,
+    onBack: () -> Unit,
+    subtitle: String = "",
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val scrollBehavior = MiuixScrollBehavior()
     val layoutDirection = LocalLayoutDirection.current
     val family = Family.colors
@@ -85,11 +214,16 @@ internal fun SettingsScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = stringResource(R.string.settings_title),
-                    subtitle = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                    title = title,
+                    subtitle = subtitle,
                     color = family.page,
                     navigationIcon = {
-                        IconButton(onClick = onBack, minWidth = Dimens.minTouch, minHeight = Dimens.minTouch) {
+                        IconButton(
+                            onClick = onBack,
+                            minWidth = Dimens.minTouch,
+                            minHeight = Dimens.minTouch,
+                            modifier = Modifier.testTag("settings-back"),
+                        ) {
                             Icon(
                                 imageVector = MiuixIcons.Back,
                                 contentDescription = stringResource(R.string.settings_back),
@@ -124,69 +258,40 @@ internal fun SettingsScreen(
                 .testTag("settings-scroll")
                 .padding(top = Spacing.sm),
         ) {
-            var block = 0
-
-            CountBadgePreview(
-                settings = BadgePreviewSettings(
-                    iconColorEnabled = state.iconColorEnabled,
-                    temporaryColor = state.temporaryColor,
-                    durationSeconds = state.colorDurationSeconds,
-                    digitColor = state.digitColor,
-                    badgeContrast = state.badgeContrast,
-                    digitWeight = state.digitWeight,
-                    digitContrast = state.digitContrast,
-                ),
-                modifier = Modifier.padding(horizontal = Spacing.gutter).staggeredEntrance(SCREEN, block++),
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            ConnectionCard(
-                status = state.status,
-                enabledFilters = Integer.bitCount(state.mask),
-                onRetry = onRetry,
-                modifier = Modifier.staggeredEntrance(SCREEN, block++),
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            Footnote(
-                text = stringResource(R.string.settings_intro),
-                modifier = Modifier.staggeredEntrance(SCREEN, block++),
-            )
-
-            Column(Modifier.staggeredEntrance(SCREEN, block++)) {
-                SectionHeader(title = stringResource(R.string.settings_section_display))
-                DisplaySection(
-                    state, editable, onIconColorChange, onTemporaryColorChange, onColorDurationChange,
-                    onDigitColorChange, onBadgeContrastChange, onDigitWeightChange, onDigitContrastChange,
-                )
-            }
-
-            filterGroups.forEachIndexed { index, group ->
-                Column(Modifier.staggeredEntrance(SCREEN, block++)) {
-                    SectionHeader(
-                        title = stringResource(group.title),
-                        enabled = group.enabledCount(state.mask),
-                        total = group.types.size,
-                    )
-                    if (index == 0) {
-                        Footnote(
-                            text = stringResource(R.string.settings_overlap),
-                            modifier = Modifier.padding(bottom = Spacing.xs),
-                        )
-                    }
-                    FilterSection(group, state.mask, editable, onFilterChange)
-                }
-            }
-
-            Spacer(Modifier.height(Spacing.lg))
-            FamilyButton(
-                text = stringResource(R.string.settings_reset),
-                onClick = onReset,
-                enabled = editable && state.mask != 0,
-                testTag = "settings-reset",
-                kind = ButtonKind.DESTRUCTIVE,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter),
-            )
+            content()
             Spacer(Modifier.height(Spacing.lg + insets.calculateBottomPadding()))
         }
+    }
+}
+
+@Composable
+private fun PagePreview(state: SettingsStore.State, modifier: Modifier) {
+    CountBadgePreview(
+        settings = BadgePreviewSettings(
+            iconColorEnabled = state.iconColorEnabled,
+            temporaryColor = state.temporaryColor,
+            durationSeconds = state.colorDurationSeconds,
+            digitColor = state.digitColor,
+            badgeContrast = state.badgeContrast,
+            digitWeight = state.digitWeight,
+            digitContrast = state.digitContrast,
+        ),
+        modifier = Modifier.padding(horizontal = Spacing.gutter).then(modifier),
+    )
+}
+
+/** The display page repeats the connection card only while it explains why rows are disabled. */
+@Composable
+private fun UnsettledConnection(state: SettingsStore.State, onRetry: () -> Unit, modifier: Modifier) {
+    if (!state.status.isSettled()) {
+        Spacer(Modifier.height(Spacing.sm))
+        ConnectionCard(
+            status = state.status,
+            enabledFilters = Integer.bitCount(state.mask),
+            onRetry = onRetry,
+            modifier = modifier,
+        )
+        Spacer(Modifier.height(Spacing.sm))
     }
 }
 

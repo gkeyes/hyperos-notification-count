@@ -23,6 +23,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -86,6 +87,7 @@ class SettingsActivityTest {
         val color = composeRule.onNodeWithTag("icon-color-switch")
         val temporary = composeRule.onNodeWithTag("temporary-color-switch")
         val duration = composeRule.onNodeWithTag("icon-color-duration")
+        open("nav-display")
         connectPersisted()
         temporary.assertIsOff().assertIsNotEnabled()
         duration.assertIsNotEnabled().assertHasNoClickAction()
@@ -112,12 +114,15 @@ class SettingsActivityTest {
     @Test
     fun colorSwitchPersistsReopensAndFilterResetLeavesItOn() {
         val color = composeRule.onNodeWithTag("icon-color-switch")
+        open("nav-display")
         color.assertIsOff().assertIsNotEnabled().assertHasNoClickAction()
         connectPersisted()
         color.performScrollTo().assertIsEnabled().performClick().assertIsOn()
         assertTrue(composeRule.runOnIdle { persisted.getBoolean(FilterPreferences.ICON_COLOR_ENABLED, false) })
+        open("nav-filters")
         filter(NotificationType.MEDIA).performScrollTo().performClick()
         composeRule.onNodeWithTag("settings-reset").performScrollTo().performClick()
+        open("nav-display")
         color.performScrollTo().assertIsOn()
         composeRule.runOnIdle { application.replaceSettingsStore().connect(Any()) { persisted } }
         composeRule.activityRule.scenario.recreate()
@@ -134,6 +139,7 @@ class SettingsActivityTest {
 
     @Test
     fun allFifteenFiltersHaveTheirOwnLabelsTagsAndOffDefaults() {
+        open("nav-filters")
         assertFilterCount()
         for (type in NotificationType.values()) {
             val (title, description) = expectedLabels(type)
@@ -160,6 +166,7 @@ class SettingsActivityTest {
 
     @Test
     fun togglingEveryFilterPersistsReopensAndResetsTogether() {
+        open("nav-filters")
         connectPersisted()
         var mask = 0
         for (type in NotificationType.values()) {
@@ -195,6 +202,7 @@ class SettingsActivityTest {
         val previous = NotificationType.ONGOING_EVENT.bit
         val remote = SettingsTestDoubles.OptimisticPreferences(previous)
         remote.queueCommitResults(false, false)
+        open("nav-filters")
         composeRule.runOnIdle {
             application.getSettingsStore().connect(Any()) { remote.preferences }
         }
@@ -223,6 +231,7 @@ class SettingsActivityTest {
 
     @Test
     fun stoppedScreenStopsObservingAndRendersCurrentStateWhenStartedAgain() {
+        open("nav-filters")
         connectPersisted()
         filter(NotificationType.FOCUS).assertIsOff()
         composeRule.runOnIdle { assertEquals(1, observerCount()) }
@@ -245,6 +254,7 @@ class SettingsActivityTest {
 
     @Test
     fun badgeStyleSegmentsPersistAndColorOnlyStylesFollowTheColorSwitch() {
+        open("nav-display")
         connectPersisted()
         val weight = composeRule.onNodeWithTag("digit-weight")
         weight.performScrollTo().assert(stateDescription(R.string.settings_digit_weight_normal))
@@ -274,6 +284,7 @@ class SettingsActivityTest {
     @Test
     fun livePreviewCyclesCountsFollowsColorModeAndNeverWritesSettings() {
         val preview = composeRule.onNodeWithTag("settings-preview")
+        open("nav-display")
         preview.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assertContentDescriptionEquals(previewDescription(count = 3, mode = R.string.settings_preview_mono))
         // 3 -> 9, then the overflow glyph, then wrap back to 1.
@@ -333,6 +344,7 @@ class SettingsActivityTest {
             assertEquals(1.3f, configuration.fontScale, 0.01f)
             assertEquals(Configuration.UI_MODE_NIGHT_YES, configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
         }
+        open("nav-filters")
         connectPersisted()
         assertFilterCount()
         composeRule.onNodeWithTag("settings-scroll").assert(hasScrollAction())
@@ -347,6 +359,46 @@ class SettingsActivityTest {
         assertMaskAndEnabled(0, enabled = true)
         assertEquals(0, composeRule.runOnIdle { persistedMask() })
         filter(NotificationType.FOCUS).performScrollTo().assertIsDisplayed().assertIsOff()
+    }
+
+    @Test
+    fun homeLinksToBothPagesAndBackReturnsHome() {
+        val display = composeRule.onNodeWithTag("nav-display")
+        val filters = composeRule.onNodeWithTag("nav-filters")
+        display.assertHasClickAction()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        filters.assertContentDescriptionEquals(
+            application.getString(R.string.settings_section_filters) + "。" +
+                application.getString(R.string.settings_selected, 0),
+        )
+        composeRule.onNodeWithTag("filter-${NotificationType.MEDIA.key}").assertDoesNotExist()
+        composeRule.onNodeWithTag("icon-color-switch").assertDoesNotExist()
+
+        display.performScrollTo().performClick()
+        composeRule.onNodeWithTag("icon-color-switch").assertExists()
+        display.assertDoesNotExist()
+        composeRule.onNodeWithTag("settings-back").performClick()
+        display.assertExists()
+
+        connectPersisted()
+        filters.performScrollTo().performClick()
+        filter(NotificationType.MEDIA).performScrollTo().performClick().assertIsOn()
+        // System Back returns to home instead of closing the activity.
+        composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        filters.assertContentDescriptionEquals(
+            application.getString(R.string.settings_section_filters) + "。" +
+                application.getString(R.string.settings_selected, 1),
+        )
+        assertTrue(composeRule.runOnIdle { !composeRule.activity.isFinishing })
+    }
+
+    /** Opens a sub-page from home, returning home first when another sub-page is showing. */
+    private fun open(navTag: String) {
+        if (composeRule.onAllNodesWithTag(navTag).fetchSemanticsNodes().isEmpty()) {
+            composeRule.onNodeWithTag("settings-back").performClick()
+        }
+        composeRule.onNodeWithTag(navTag).performScrollTo().performClick()
+        composeRule.onNodeWithTag(navTag).assertDoesNotExist()
     }
 
     private fun connectPersisted() {

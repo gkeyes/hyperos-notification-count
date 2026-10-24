@@ -59,6 +59,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -210,6 +211,35 @@ internal fun SwitchRow(
                     }
                 } else {
                     disabled()
+                }
+            },
+    )
+}
+
+/** Row that opens a sub-page: leading icon, live summary, Miuix chevron. */
+@Composable
+internal fun NavRow(
+    icon: ImageVector,
+    title: String,
+    summary: String,
+    onOpen: () -> Unit,
+    testTag: String,
+) {
+    ArrowPreference(
+        title = title,
+        summary = summary,
+        onClick = onOpen,
+        startAction = { LeadingIcon(icon, active = true) },
+        modifier = Modifier
+            .heightIn(min = Dimens.rowMinHeight)
+            .observedPressFeedback(true)
+            .testTag(testTag)
+            .clearAndSetSemantics {
+                contentDescription = "$title。$summary"
+                role = Role.Button
+                onClick {
+                    onOpen()
+                    true
                 }
             },
     )

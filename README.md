@@ -1,4 +1,4 @@
-# HyperOS 通知数量 0.2.0
+# HyperOS 通知数量 0.3.0
 
 基于 libxposed API **102.0.0**，将 HyperOS 4 顶部通知 App 图标替换为一个通知数量图标。设置页从 LSPosed / Vector 的模块设置入口打开，**不显示桌面图标**。启用模块或安装新版后，在 SystemUI 下次加载模块时生效；新版加载后的过滤开关通过框架实时更新。
 
@@ -16,7 +16,7 @@
 
 ## 过滤设置
 
-设置页使用 [Miuix 0.9.4](https://github.com/compose-miuix-ui/miuix/releases/tag/v0.9.4) 的 `TopAppBar`、`Card`、`SmallTitle`、`SwitchPreference`、`OverlayDropdownPreference` 和按钮组件，跟随系统深浅色与字体大小。原有 15 项过滤及 API 102 配置格式保持兼容，可从固定签名的 0.1.1–0.1.5 直接更新。
+设置页使用 [Miuix 0.9.4](https://github.com/compose-miuix-ui/miuix/releases/tag/v0.9.4) 的 `TopAppBar`、`Card`、`SmallTitle`、`SwitchPreference`、`ArrowPreference`、`OverlayDropdownPreference` 和按钮组件，跟随系统深浅色与字体大小。0.3.0 起分为三页：首页显示实时预览、连接状态和两个入口；「显示样式」页放预览与全部外观选项；「通知过滤」页放 15 项过滤和「关闭全部过滤」。返回键和左上角箭头从子页回到首页，旋转等重建后停留在原页。原有 15 项过滤及 API 102 配置格式保持兼容，可从固定签名的 0.1.1–0.1.5 直接更新。
 
 15 个开关全部默认关闭，**开启表示从计数中排除**。只修改数量，不取消通知、不影响通知面板，也不改超级岛的展示。条目可能同时属于多类，命中任一开启的开关即排除。建议每次只开一项测试，然后再组合。
 
@@ -56,7 +56,7 @@ GitHub Actions 使用 JDK 21、Android SDK 37.0、Gradle 9.4.1、Android Gradle 
 
 模块 Hook API 依赖为 `compileOnly`，不把框架 API 类打进 APK。设置通信库及其官方 `XposedProvider` 随 APK 打包；编译后的 manifest 检查只允许这个 provider 和模块设置 Activity，并验证没有 LAUNCHER 或额外权限。定向移除设置页不使用的 AndroidX 启动 provider、profile receiver 和旧版动态接收器权限；仅允许两条 `required=false` 的 AndroidX Window 扩展库声明。JUnit / Robolectric / Compose UI test 只用于测试，不属于模块 APK。
 
-包名 `dev.hyperos.notificationcount`。首个本地测试包为 `0.1.0` / versionCode `1`；固定云端签名始于 `0.1.1` / versionCode `2`；原设置页版本为 `0.1.2` / versionCode `3`；Miuix 设置页始于 `0.1.3` / versionCode `4`，压缩版为 `0.1.4` / versionCode `5`，可选取色版为 `0.1.5` / versionCode `6`，临时变色版为 `0.1.6` / versionCode `7`，实心徽标版为 `0.1.7` / versionCode `8`，当前数字对比度版为 `0.2.0` / versionCode `9`。保留既有交付文件及校验值。
+包名 `dev.hyperos.notificationcount`。首个本地测试包为 `0.1.0` / versionCode `1`；固定云端签名始于 `0.1.1` / versionCode `2`；原设置页版本为 `0.1.2` / versionCode `3`；Miuix 设置页始于 `0.1.3` / versionCode `4`，压缩版为 `0.1.4` / versionCode `5`，可选取色版为 `0.1.5` / versionCode `6`，临时变色版为 `0.1.6` / versionCode `7`，实心徽标版为 `0.1.7` / versionCode `8`，数字对比度版为 `0.2.0` / versionCode `9`，当前多页设置版为 `0.3.0` / versionCode `10`。保留既有交付文件及校验值。
 
 后续检查与编译在 GitHub Actions 执行，本地不再启动构建。云端使用本模块专属固定签名，私钥通过仓库加密 Secrets 传入，不提交到 Git。首次从本地 `0.1.0` 测试包转到云端包时，两者签名不同，需要手动卸载旧测试包后安装；后续云端包可连续更新。
 
