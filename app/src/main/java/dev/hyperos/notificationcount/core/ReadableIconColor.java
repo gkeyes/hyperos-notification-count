@@ -27,9 +27,10 @@ public final class ReadableIconColor {
 
     /**
      * The badge pushed toward black (under a white digit) or toward white (under a black digit)
-     * just far enough for the digit to reach {@code minLc}, keeping its hue and alpha. Of the two,
-     * the smaller change wins as long as the badge keeps {@code minBarContrast} against the bar;
-     * moving away from the bar always does, so one direction is always allowed.
+     * just far enough for the digit to reach {@code minLc}, keeping its hue and alpha, while the
+     * badge keeps {@code minBarContrast} against the bar. In practice only moving away from the
+     * bar qualifies: a badge dark enough for a white Lc 90 digit is under 3:1 against a dark bar,
+     * so dark bars always lighten (to a pale, near-white badge) and light bars always darken.
      */
     public static int boostedForDigits(int badge, int systemTint, double minBarContrast, double minLc) {
         int opaque = badge | 0xff000000;

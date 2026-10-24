@@ -22,7 +22,7 @@
     <string name="settings_digit_color_black">黑色</string>
     <string name="settings_digit_color_transparent">透明</string>
     <string name="settings_digit_contrast_title">数字对比度</string>
-    <string name="settings_digit_contrast_description">数字颜色为自动时生效。同色系：数字保留圆点的色相，较柔和，部分颜色会直接变成黑白；黑白：纯黑或纯白，按人眼对比自动选择；加强：数字用黑白，并把圆点调深或调浅，数字最清楚，但圆点会明显变深或变浅。</string>
+    <string name="settings_digit_contrast_description">数字颜色为自动时生效。同色系：数字保留圆点的色相，较柔和，部分颜色会直接变成黑白；黑白：纯黑或纯白，按人眼对比自动选择；加强：数字用黑白，并把圆点调深或调浅，数字最清楚；浅色状态栏上圆点变深，深色状态栏上圆点会变得很淡、接近白色，此时圆点对比度三档效果相同。</string>
     <string name="settings_digit_contrast_hue">同色系</string>
     <string name="settings_digit_contrast_black_white">黑白</string>
     <string name="settings_digit_contrast_boost">加强</string>
